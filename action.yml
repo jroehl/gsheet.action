@@ -1,6 +1,8 @@
 name: 'gsheet.action'
 description: 'This action helps in CRUD operations on a google sheet.'
 author: 'jroehl <mail@johannroehl.de>'
+icon: book
+color: green
 inputs:
   spreadsheetId:
     description: 'The id of the spreadsheet to use'
