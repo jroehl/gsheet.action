@@ -138,5 +138,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## TODO
 
-- [ ] documentation
-- [ ] tests
+- [x] documentation
+- [ ] more tests
