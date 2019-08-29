@@ -3,8 +3,8 @@
 A github action to help with CRUD operations on google sheets.
 
 - [gsheet.action](#gsheetaction)
-  - [Usage](#usage)
-    - [Secrets required as environment variables](#secrets-required-as-environment-variables)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
     - [Setup in github action workflow (v2)](#setup-in-github-action-workflow-v2)
   - [Supported commands](#supported-commands)
     - [addWorksheet](#addworksheet)
@@ -14,11 +14,17 @@ A github action to help with CRUD operations on google sheets.
     - [appendData](#appenddata)
     - [getCellData](#getcelldata)
     - [getInfo](#getinfo)
+  - [Build with](#build-with)
+  - [Contributing](#contributing)
+  - [Versioning](#versioning)
+  - [License](#license)
   - [TODO](#todo)
 
-## Usage
+## Getting Started
 
-### Secrets required as environment variables
+### Prerequisites
+
+Secrets required as environment variables
 
 - GSHEET_CLIENT_EMAIL (email of the service account that has permission to access the spreadsheet)
 - GSHEET_PRIVATE_KEY (private key of the service account that has permission to access the spreadsheet)
@@ -111,6 +117,24 @@ Returns cell data as Array<Array\<primitive>>
 ### getInfo
 
 Returns spreadsheet info
+
+## Build with
+
+- [google-spreadsheet](https://github.com/theoephraim/node-google-spreadsheet) - The node module used for manipulating the google sheet
+- [semantic-release](https://github.com/semantic-release/semantic-release) - for releasing new versions
+- [typescript](https://www.typescriptlang.org)
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+
+## Versioning
+
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
 
 ## TODO
 
