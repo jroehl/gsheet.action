@@ -32,11 +32,10 @@ jobs:
 
       - name: 'setup git'
         env:
-          URL: ${{ format('https://{0}:{1}@github.com/{2}.git', github.actor, secrets.ACCESS_TOKEN, github.repository) }}
-          ACTOR: ${{ github.actor }}
+          URL: ${{ format('https://jroehl:{0}@github.com/{1}.git', secrets.ACCESS_TOKEN, github.repository) }}
         run: |
           git config --global user.email "mail@johannroehl.de"
-          git config --global user.name "$ACTOR"
+          git config --global user.name "jroehl"
           git remote rm origin
           git remote add origin $URL
 
