@@ -2,7 +2,7 @@
 
 A github action to help with CRUD operations on google sheets.
 
-- [gsheet.action](#gsheet.action)
+- [gsheet.action](#gsheetaction)
   - [Usage](#usage)
     - [Secrets required as environment variables](#secrets-required-as-environment-variables)
     - [Setup in github action workflow (v2)](#setup-in-github-action-workflow-v2)
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: 'update_worksheet'
-        uses: jroehl/gsheet.action@v1.0.0
+        uses: jroehl/gsheet.action@v1.0.0 # you can specify the "release" branch to have always the latest changes (dangerous)
         with:
           spreadsheetId: <spreadsheetId>
           commands: | # list of commands, specified as a valid JSON string
