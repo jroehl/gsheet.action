@@ -5,7 +5,7 @@
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
-    "document": "tsc bin/* --outDir lib && node ./lib/bin/documentation.js",
+    "document": "tsc src/bin/* --outDir lib && node ./lib/bin/documentation.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch --coverage",
     "semantic-release": "semantic-release"

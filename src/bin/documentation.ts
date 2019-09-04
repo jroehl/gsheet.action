@@ -1,4 +1,4 @@
-import config from '../src/config';
+import config from '../config';
 import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
