@@ -22,7 +22,7 @@ describe('lib', () => {
 
     it('fails the validation when command is wrong', () => {
       expect(() => validateCommands(JSON.stringify([{ command: 'wrongCommand', args: { foo: 'bar' } }]))).toThrowError(
-        'Command "wrongCommand" not found - must be one of: "addSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "updateData", "appendData", "getData", "getSpreadsheet"'
+        'Command "wrongCommand" not found - must be one of: "addSpreadsheet", "getSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "updateData", "appendData", "getData"'
       );
     });
 

@@ -45,11 +45,11 @@ describe('main.ts', () => {
 
   it('should fail a run', async () => {
     commands = JSON.stringify([
-      { command: 'appendWorksheet', args: { worksheetTitle } },
+      { command: 'wrongCommand', args: { worksheetTitle } },
       { command: 'updateData', args: { data: [['1', '2', '3']], minRow: 2 } },
     ]);
     const expectedError =
-      'Command "appendWorksheet" not found - must be one of: "addSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "updateData", "appendData", "getData", "getSpreadsheet"';
+      'Command "wrongCommand" not found - must be one of: "addSpreadsheet", "getSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "updateData", "appendData", "getData"';
     const res: Results = await run();
     expect(res.error).toEqual(expectedError);
     expect(core.debug).not.toHaveBeenCalled();
