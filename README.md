@@ -142,7 +142,7 @@ Get cell data (within specified range)
 
 ## Build with
 
-- [google-spreadsheet](https://github.com/theoephraim/node-google-spreadsheet) - The node module used for manipulating the google sheet
+- [google-sheet-cli](https://github.com/jroehl/google-sheet-cli/) - The node module used for manipulating the google sheet
 - [semantic-release](https://github.com/semantic-release/semantic-release) - for releasing new versions
 - [typescript](https://www.typescriptlang.org)
 
