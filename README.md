@@ -7,13 +7,14 @@ A github action to help with CRUD operations on google sheets.
     - [Prerequisites](#prerequisites)
     - [Setup in github action workflow (v2)](#setup-in-github-action-workflow-v2)
   - [Supported commands](#supported-commands)
+    - [addSpreadsheet](#addspreadsheet)
+    - [getSpreadsheet](#getspreadsheet)
     - [addWorksheet](#addworksheet)
     - [getWorksheet](#getworksheet)
     - [removeWorksheet](#removeworksheet)
     - [updateData](#updatedata)
     - [appendData](#appenddata)
-    - [getCellData](#getcelldata)
-    - [getInfo](#getinfo)
+    - [getData](#getdata)
   - [Build with](#build-with)
   - [Contributing](#contributing)
   - [Versioning](#versioning)
@@ -59,64 +60,85 @@ jobs:
 ```
 
 ## Supported commands
+<!-- commands -->
+### addSpreadsheet
 
+Add a spreadsheet with the specified title to the spreadsheet
+
+- args
+  - spreadsheetTitle:string - The title of the worksheet
+  
+### getSpreadsheet
+
+Get a spreadsheet with the specified title
+
+- args
+  - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
+  
 ### addWorksheet
 
-Adds a worksheet with the specified title to the spreadsheet
+Add a worksheet with the specified title to the spreadsheet
 
 - args
-  - worksheetTitle:string
-
+  - worksheetTitle:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
+  - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
+  
 ### getWorksheet
 
-Gets an existing worksheet with the specified title
+Get a worksheet with the specified title
 
 - args
-  - worksheetTitle:string
-
+  - worksheetTitle:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
+  - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
+  
 ### removeWorksheet
 
-Removes an existing worksheet with the specified title
+Remove an existing worksheet with the specified title
 
 - args
-  - worksheetTitle:string
-
+  - worksheetTitle:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
+  - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
+  
 ### updateData
 
-> needs to be called after one of addWorksheet | getWorksheet to select the worksheet for this operation
-
-Updates cells with the specified data
+Updates cells with the specified data (at the specified range)
 
 - args
-  - data:Array<Array\<primitive>> (specifies the data as nested array [["1", "2", "3"]])
-  - row?:number (the optional starting row of the operation)
-  - col?:number (the optional starting col of the operation)
-
+  - data:string - The data to be used as a JSON string - nested array [["1", "2", "3"]]
+  - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
+  - [minRow=1]?:number - Starting row of the operation
+  - [minCol=1]?:number - Starting row of the operation
+  - [range]?:string - Range in a1 notation to be used for the operation
+  - [valueInputOption=RAW]?:string - The input value to be used
+  - [worksheetTitle]?:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
+  
 ### appendData
 
-> needs to be called after one of addWorksheet | getWorksheet to select the worksheet for this operation
-
-Append cells with the specified data after the last row in starting col
+Append cells with the specified data after the last row (in starting col)
 
 - args
-  - data:Array<Array\<primitive>> (specifies the data as nested array [["1", "2", "3"]])
-  - col?:number (the optional starting col of the operation)
+  - data:string - The data to be used as a JSON string - nested array [["1", "2", "3"]]
+  - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
+  - [minCol=1]?:number - Starting row of the operation
+  - [range]?:string - Range in a1 notation to be used for the operation
+  - [valueInputOption=RAW]?:string - The input value to be used
+  - [worksheetTitle]?:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
+  
+### getData
 
-### getCellData
-
-> needs to be called after one of addWorksheet | getWorksheet to select the worksheet for this operation
-
-Returns cell data as Array<Array\<primitive>>
+Get cell data (within specified range)
 
 - args
-  - minRow?:number (the optional starting row of the operation)
-  - minCol?:number (the optional starting col of the operation)
-  - maxRow?:number (the optional ending row of the operation)
-  - maxCol?:number (the optional ending col of the operation)
-
-### getInfo
-
-Returns spreadsheet info
+  - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
+  - [minRow=1]?:number - Starting row of the operation
+  - [minCol=1]?:number - Starting row of the operation
+  - [maxRow]?:number - Last row of the operation
+  - [maxCol]?:number - Last row of the operation
+  - [range]?:string - Range in a1 notation to be used for the operation
+  - [hasHeaderRow]?:boolean - If the first row should be treated as header row
+  - [worksheetTitle]?:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
+  
+<!-- commandsstop -->
 
 ## Build with
 
@@ -130,7 +152,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/jroehl/gsheet.action/tags).
 
 ## License
 

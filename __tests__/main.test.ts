@@ -1,4 +1,4 @@
-import run from '../src/main';
+import run, { Results } from '../src/main';
 import * as core from '@actions/core';
 
 const worksheetTitle = `test-action-${Date.now()}`;
@@ -21,29 +21,54 @@ jest.mock('@actions/core', () => {
 
 describe('main.ts', () => {
   it('should complete a run', async () => {
-    commands = JSON.stringify([{ command: 'addWorksheet', args: { worksheetTitle } }, { command: 'updateData', args: { data: [['1', '2', '3']], row: 2 } }]);
-    await expect(run()).resolves.toBeDefined();
+    commands = JSON.stringify([
+      {
+        command: 'addWorksheet',
+        args: { worksheetTitle },
+      },
+      {
+        command: 'updateData',
+        args: { data: [['1', '2', '3']], minRow: 2 },
+      },
+    ]);
+    const res: Results = await run();
+    expect(core.setFailed).not.toHaveBeenCalled();
+    expect(res.error).toBeUndefined();
+    expect(res.results[0].command).toEqual({ func: 'addWorksheet', kwargs: [worksheetTitle, undefined] });
+    expect(res.results[0].result).toHaveProperty('properties');
+    expect(res.results[0].result.properties.title).toBe(worksheetTitle);
+    expect(res.results[1].command).toEqual({ func: 'updateData', kwargs: [[['1', '2', '3']], { minRow: 2, worksheetTitle }, undefined] });
+    expect(res.results[1].result).toBeUndefined();
     expect(core.debug).toHaveBeenCalled();
     expect(core.setOutput).toHaveBeenCalled();
-    expect(core.setFailed).not.toHaveBeenCalled();
   });
 
   it('should fail a run', async () => {
-    commands = JSON.stringify([{ command: 'appendWorksheet', args: { worksheetTitle } }, { command: 'updateData', args: { data: [['1', '2', '3']], row: 2 } }]);
-    await expect(run()).resolves.toBeUndefined();
+    commands = JSON.stringify([
+      { command: 'appendWorksheet', args: { worksheetTitle } },
+      { command: 'updateData', args: { data: [['1', '2', '3']], minRow: 2 } },
+    ]);
+    const expectedError =
+      'Command "appendWorksheet" not found - must be one of: "addSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "updateData", "appendData", "getData", "getSpreadsheet"';
+    const res: Results = await run();
+    expect(res.error).toEqual(expectedError);
     expect(core.debug).not.toHaveBeenCalled();
     expect(core.setOutput).not.toHaveBeenCalled();
-    expect(core.setFailed).toHaveBeenCalledWith(
-      'Command "appendWorksheet" not found - must be one of: "addWorksheet", "getWorksheet", "removeWorksheet", "updateData", "appendData", "getCellData", "getInfo"'
-    );
+    expect(core.setFailed).toHaveBeenCalledWith(expectedError);
   });
 
   it('should remove a a worksheet', async () => {
     commands = JSON.stringify([{ command: 'removeWorksheet', args: { worksheetTitle } }]);
-    await expect(run()).resolves.toBeDefined();
-    expect(core.debug).toHaveBeenCalled();
-    expect(core.setOutput).toHaveBeenCalledWith('results', `[{\"command\":{\"func\":\"removeWorksheet\",\"kwargs\":[\"${worksheetTitle}\"]}}]`);
+    const res: Results = await run();
     expect(core.setFailed).not.toHaveBeenCalled();
+    expect(res.error).toBeUndefined();
+    expect(res.results[0].command).toEqual({ func: 'removeWorksheet', kwargs: [worksheetTitle, undefined] });
+    expect(res.results[0].result).toBeUndefined();
+    expect(core.debug).toHaveBeenCalled();
+    expect(core.setOutput).toHaveBeenCalledWith(
+      'results',
+      `{\"results\":[{\"command\":{\"func\":\"removeWorksheet\",\"kwargs\":[\"${worksheetTitle}\",null]}}]}`
+    );
   });
 
   afterAll(() => {

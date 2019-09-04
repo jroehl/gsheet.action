@@ -1,13 +1,18 @@
 import * as core from '@actions/core';
-import GoogleSheet from './google-sheet';
 import { validateCommands, asyncForEach, ValidatedCommand } from './lib';
+import { GoogleSheet } from 'google-sheet-cli';
 
-interface Result {
+export interface Result {
   command: ValidatedCommand;
   result: any;
 }
 
-export default async function run() {
+export interface Results {
+  results: Result[];
+  error?: Error;
+}
+
+export default async function run(): Promise<Results> {
   try {
     const spreadsheetId: string = core.getInput('spreadsheetId', { required: true });
 
@@ -23,18 +28,19 @@ export default async function run() {
     const commandsString: string = core.getInput('commands', { required: true });
     const validatedCommands = validateCommands(commandsString);
 
-    const results: Array<Result> = [];
+    const results: Result[] = [];
     await asyncForEach(validatedCommands, async (command: ValidatedCommand) => {
       const { func, kwargs } = command;
       const result = await gsheet[func](...kwargs);
       results.push({ command, result });
     });
 
-    core.setOutput('results', JSON.stringify(results));
+    core.setOutput('results', JSON.stringify({ results }));
     core.debug(`Processed commands\n${JSON.stringify(results, null, 2)}`);
-    return results;
+    return { results };
   } catch (error) {
     core.setFailed(error.message || error);
+    return { error, results: [] };
   }
 }
 
