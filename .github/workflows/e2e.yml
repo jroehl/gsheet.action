@@ -2,7 +2,7 @@ name: 'E2E tests (preview) version'
 on:
   push:
     branches:
-      - preview/*
+      - 'preview/**'
 
 jobs:
   e2e:
