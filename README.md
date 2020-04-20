@@ -59,6 +59,8 @@ jobs:
         run: echo "$RESULTS" | jq
 ```
 
+> See ./github/workflows/e2e.yml for another example.
+
 ## Supported commands
 <!-- commands -->
 ### addSpreadsheet
@@ -161,4 +163,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## TODO
 
 - [x] documentation
-- [ ] more tests
+- [x] more tests
