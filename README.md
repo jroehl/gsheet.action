@@ -19,7 +19,6 @@ A github action to help with CRUD operations on google sheets.
   - [Contributing](#contributing)
   - [Versioning](#versioning)
   - [License](#license)
-  - [TODO](#todo)
 
 ## Getting Started
 
@@ -160,8 +159,3 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
-
-## TODO
-
-- [x] documentation
-- [x] more tests
