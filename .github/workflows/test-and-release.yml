@@ -102,6 +102,13 @@ jobs:
             echo "Comment already exists, nothing to do!"
           fi
 
+      - name: 'semantic-release'
+        run: |
+          git fetch origin --tags --force
+          npm run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 'cleanup branches'
         run: |
           git fetch --prune
