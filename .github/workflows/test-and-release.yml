@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: .github/actions/test
+      - uses: ./.github/actions/test
 
   release:
     runs-on: ubuntu-latest
