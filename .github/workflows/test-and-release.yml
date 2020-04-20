@@ -156,6 +156,7 @@ jobs:
   cleanup:
     if: always()
     needs: [release, release-preview]
+    runs-on: ubuntu-latest
     steps:
       - name: cleanup branches
         run: |
