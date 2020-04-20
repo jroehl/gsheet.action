@@ -1,0 +1,116 @@
+name: 'E2E tests (preview) version'
+on:
+  push:
+    branches:
+      - 'preview/**'
+
+jobs:
+  e2e:
+    env:
+      TARGET_URL: ${{ format('https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
+      STATUS_URL: '{{ STATUS_URL }}'
+      STATUS_CONTEXT: e2e-preview/github-actions
+    runs-on: ubuntu-latest
+    steps:
+      - name: create pull request status pending
+        run: |
+          description="E2E tests pending"
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"pending\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
+
+      - id: 'run_worksheet_tests'
+        uses: '{{ USES_PREVIEW_VERSION }}'
+        with:
+          spreadsheetId: ${{ secrets.TEST_SPREADSHEET_ID }}
+          commands: | # list of commands, specified as a valid JSON string
+            [
+              { "command": "addWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests>" }},
+              { "command": "updateData", "args": { "data": [["A1", "A2", "A3"]] }},
+              { "command": "appendData", "args": { "data": [["B1", "B2", "B3"]], "minCol": 1 }},
+              { "command": "appendData", "args": { "data": [["C2", "C3", "C4"]], "minCol": 2 }},
+              { "command": "getData", "args": { "minCol": 1 } },
+              { "command": "getData", "args": { "range": "<gsheet.action_e2e-tests>!A2:B3" } },
+              { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests>" }}
+            ]
+        env:
+          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
+          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+
+      - name: run tests
+        env:
+          #  the output of the action can be found in ${{ steps.run_worksheet_tests.outputs.results }}
+          RESULTS: ${{ steps.run_worksheet_tests.outputs.results }}
+        run: |
+          function assert() {
+            local filter=${1}
+            local comp=${2}
+            local expected=${3}
+            local result=$(echo "${RESULTS}" | jq --raw-output "${filter}")
+            local msg="assert ${filter} ${comp} ${expected}"
+            local success=${4:-"✅ ${msg}"}
+            local failure=${5:-"❌ ${msg} - (\"${result}\")"}
+            test ${result} ${comp} ${expected} && (printf "    %s\n" "${success}") || (printf "    %s\n" "${failure}" && exit 1)
+          }
+
+          function echo_test_run() {
+            local cmd=$(echo "${RESULTS}" | jq ".results[${1}].command.func")
+            echo "${cmd} (${1})"
+          }
+
+          echo "🧪 Running tests"
+
+          assert ".results | length" "-eq" "7"
+
+          echo_test_run 0
+          assert ".results[0].result.properties.title" "=" "<gsheet.action_e2e-tests>"
+
+          echo_test_run 1
+          assert ".results[1].command.kwargs[0][0][0]" "=" "A1"
+          assert ".results[1].command.kwargs[0][0][1]" "=" "A2"
+          assert ".results[1].command.kwargs[0][0][2]" "=" "A3"
+
+          echo_test_run 2
+          assert ".results[2].command.kwargs[0][0][0]" "=" "B1"
+          assert ".results[2].command.kwargs[0][0][1]" "=" "B2"
+          assert ".results[2].command.kwargs[0][0][2]" "=" "B3"
+
+          echo_test_run 3
+          assert ".results[3].command.kwargs[1].minCol" "-eq" "2"
+          assert ".results[3].command.kwargs[1].minRow" "-eq" "3"
+
+          echo_test_run 4
+          assert ".results[4].result.rawData[0][0]" "=" "A1"
+          assert ".results[4].result.rawData[0][1]" "=" "A2"
+          assert ".results[4].result.rawData[0][2]" "=" "A3"
+          assert ".results[4].result.rawData[0][3]" "=" ""
+          assert ".results[4].result.rawData[1][0]" "=" "B1"
+          assert ".results[4].result.rawData[1][1]" "=" "B2"
+          assert ".results[4].result.rawData[1][2]" "=" "B3"
+          assert ".results[4].result.rawData[1][3]" "=" ""
+          assert ".results[4].result.rawData[2][0]" "=" ""
+          assert ".results[4].result.rawData[2][1]" "=" "C2"
+          assert ".results[4].result.rawData[2][2]" "=" "C3"
+          assert ".results[4].result.rawData[2][3]" "=" "C4"
+          assert ".results[4].result.header[0]" "=" "(A)"
+          assert ".results[4].result.header[1]" "=" "(B)"
+          assert ".results[4].result.header[2]" "=" "(C)"
+          assert ".results[4].result.header[3]" "=" "(D)"
+
+          echo_test_run 5
+          assert ".results[5].result.rawData[0][0]" "=" "B1"
+          assert ".results[5].result.rawData[0][1]" "=" "B2"
+          assert ".results[5].result.rawData[1][0]" "=" ""
+          assert ".results[5].result.rawData[1][1]" "=" "C2"
+
+          echo "🎉 Tests successful"
+
+      - name: create pull request status failure
+        if: failure()
+        run: |
+          description="E2E tests failed"
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"failure\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
+
+      - name: create pull request status success
+        if: success()
+        run: |
+          description="E2E tests succeeded"
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"success\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
