@@ -55,6 +55,7 @@ jobs:
           git config --global user.email "mail@hinterland.dev"
           git config --global user.name "jroehl"
           git remote set-url origin git@github.com:${{ github.repository }}.git
+          git fetch
 
       - name: 'temp branch'
         run: git checkout $BRANCH || git checkout -b $BRANCH
@@ -74,7 +75,6 @@ jobs:
           STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/', github.repository) }}
         run: |
           sed -i "s|'{{ USES_PREVIEW_VERSION }}'|${USES_PREVIEW_VERSION}|g" .github/workflows/e2e.yml
-          git fetch
           LAST_COMMIT_ID=$(git log --format="%H" -n 1 origin/${{ github.head_ref }})
           sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}${LAST_COMMIT_ID}|g" .github/workflows/e2e.yml
 
