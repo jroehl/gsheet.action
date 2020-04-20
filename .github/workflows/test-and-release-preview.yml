@@ -5,24 +5,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: 'ci'
-        run: npm ci
-      - name: 'build'
-        run: npm run build
-      - name: 'test'
-        run: npm run test
-        env:
-          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
-          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
-          TEST_SPREADSHEET_ID: ${{ secrets.TEST_SPREADSHEET_ID }}
-      - name: 'check for uncommitted changes'
-        # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
-        run: |
-          git diff --exit-code --stat -- . ':!node_modules' \
-          || (echo "##[error] found changed files after build. please 'npm run build && npm run format'" \
-                   "and check in all changes" \
-              && exit 1)
+      - name: test
+        uses: ./.github/actions/test
 
   release-preview:
     runs-on: ubuntu-latest
@@ -93,92 +77,92 @@ jobs:
             fi
           done
 
-  e2e:
-    runs-on: ubuntu-latest
-    needs: release-preview
-    steps:
-      - id: 'run_worksheet_tests'
-        uses: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
-        with:
-          spreadsheetId: ${{ secrets.TEST_SPREADSHEET_ID }}
-          commands: | # list of commands, specified as a valid JSON string
-            [
-              { "command": "addWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests>" }},
-              { "command": "updateData", "args": { "data": [["A1", "A2", "A3"]] }},
-              { "command": "appendData", "args": { "data": [["B1", "B2", "B3"]], "minCol": 1 }},
-              { "command": "appendData", "args": { "data": [["C2", "C3", "C4"]], "minCol": 2 }},
-              { "command": "getData", "args": { "minCol": 1 } },
-              { "command": "getData", "args": { "range": "<gsheet.action_e2e-tests>!A2:B3" } },
-              { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests>" }}
-            ]
-        env:
-          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
-          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
-      - name: dump results
-        env:
-          #  the output of the action can be found in ${{ steps.run_worksheet_tests.outputs.results }}
-          RESULTS: ${{ steps.run_worksheet_tests.outputs.results }}
-        run: |
-          function assert {
-            local filter=${1}
-            local comp=${2}
-            local expected=${3}
+  # e2e:
+  #   runs-on: ubuntu-latest
+  #   needs: release-preview
+  #   steps:
+  #     - id: 'run_worksheet_tests'
+  #       uses: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
+  #       with:
+  #         spreadsheetId: ${{ secrets.TEST_SPREADSHEET_ID }}
+  #         commands: | # list of commands, specified as a valid JSON string
+  #           [
+  #             { "command": "addWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests>" }},
+  #             { "command": "updateData", "args": { "data": [["A1", "A2", "A3"]] }},
+  #             { "command": "appendData", "args": { "data": [["B1", "B2", "B3"]], "minCol": 1 }},
+  #             { "command": "appendData", "args": { "data": [["C2", "C3", "C4"]], "minCol": 2 }},
+  #             { "command": "getData", "args": { "minCol": 1 } },
+  #             { "command": "getData", "args": { "range": "<gsheet.action_e2e-tests>!A2:B3" } },
+  #             { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests>" }}
+  #           ]
+  #       env:
+  #         GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
+  #         GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+  #     - name: dump results
+  #       env:
+  #         #  the output of the action can be found in ${{ steps.run_worksheet_tests.outputs.results }}
+  #         RESULTS: ${{ steps.run_worksheet_tests.outputs.results }}
+  #       run: |
+  #         function assert {
+  #           local filter=${1}
+  #           local comp=${2}
+  #           local expected=${3}
             
-            local result=$(echo "${RESULTS}" | jq --raw-output "${filter}")
-            local msg="assert ${filter} ${comp} ${expected}"
-            local success=${4:-"✅ ${msg}"}
-            local failure=${5:-"❌ ${msg} - (\"${result}\")"}
+  #           local result=$(echo "${RESULTS}" | jq --raw-output "${filter}")
+  #           local msg="assert ${filter} ${comp} ${expected}"
+  #           local success=${4:-"✅ ${msg}"}
+  #           local failure=${5:-"❌ ${msg} - (\"${result}\")"}
 
-            test ${result} ${comp} ${expected} && (printf "    %s\n" "${success}") || (printf "    %s\n" "${failure}" && exit 1)
-          }
+  #           test ${result} ${comp} ${expected} && (printf "    %s\n" "${success}") || (printf "    %s\n" "${failure}" && exit 1)
+  #         }
 
-          function echo_test_run {
-            local cmd=$(echo "${RESULTS}" | jq ".results[${1}].command.func")
-            echo "${cmd} (${1})"
-          }
+  #         function echo_test_run {
+  #           local cmd=$(echo "${RESULTS}" | jq ".results[${1}].command.func")
+  #           echo "${cmd} (${1})"
+  #         }
 
-          echo "🧪 Running tests"
-          assert ".results | length" "-eq" "7"
+  #         echo "🧪 Running tests"
+  #         assert ".results | length" "-eq" "7"
 
-          echo_test_run 0
-          assert ".results[0].result.properties.title" "=" "<gsheet.action_e2e-tests>"
+  #         echo_test_run 0
+  #         assert ".results[0].result.properties.title" "=" "<gsheet.action_e2e-tests>"
 
-          echo_test_run 1
-          assert ".results[1].command.kwargs[0][0][0]" "=" "A1"
-          assert ".results[1].command.kwargs[0][0][1]" "=" "A2"
-          assert ".results[1].command.kwargs[0][0][2]" "=" "A3"
+  #         echo_test_run 1
+  #         assert ".results[1].command.kwargs[0][0][0]" "=" "A1"
+  #         assert ".results[1].command.kwargs[0][0][1]" "=" "A2"
+  #         assert ".results[1].command.kwargs[0][0][2]" "=" "A3"
 
-          echo_test_run 2
-          assert ".results[2].command.kwargs[0][0][0]" "=" "B1"
-          assert ".results[2].command.kwargs[0][0][1]" "=" "B2"
-          assert ".results[2].command.kwargs[0][0][2]" "=" "B3"
+  #         echo_test_run 2
+  #         assert ".results[2].command.kwargs[0][0][0]" "=" "B1"
+  #         assert ".results[2].command.kwargs[0][0][1]" "=" "B2"
+  #         assert ".results[2].command.kwargs[0][0][2]" "=" "B3"
 
-          echo_test_run 3
-          assert ".results[3].command.kwargs[1].minCol" "-eq" "2"
-          assert ".results[3].command.kwargs[1].minRow" "-eq" "3"
+  #         echo_test_run 3
+  #         assert ".results[3].command.kwargs[1].minCol" "-eq" "2"
+  #         assert ".results[3].command.kwargs[1].minRow" "-eq" "3"
 
-          echo_test_run 4
-          assert ".results[4].result.rawData[0][0]" "=" "A1"
-          assert ".results[4].result.rawData[0][1]" "=" "A2"
-          assert ".results[4].result.rawData[0][2]" "=" "A3"
-          assert ".results[4].result.rawData[0][3]" "=" ""
-          assert ".results[4].result.rawData[1][0]" "=" "B1"
-          assert ".results[4].result.rawData[1][1]" "=" "B2"
-          assert ".results[4].result.rawData[1][2]" "=" "B3"
-          assert ".results[4].result.rawData[1][3]" "=" ""
-          assert ".results[4].result.rawData[2][0]" "=" ""
-          assert ".results[4].result.rawData[2][1]" "=" "C2"
-          assert ".results[4].result.rawData[2][2]" "=" "C3"
-          assert ".results[4].result.rawData[2][3]" "=" "C4"
-          assert ".results[4].result.header[0]" "=" "(A)"
-          assert ".results[4].result.header[1]" "=" "(B)"
-          assert ".results[4].result.header[2]" "=" "(C)"
-          assert ".results[4].result.header[3]" "=" "(D)"
+  #         echo_test_run 4
+  #         assert ".results[4].result.rawData[0][0]" "=" "A1"
+  #         assert ".results[4].result.rawData[0][1]" "=" "A2"
+  #         assert ".results[4].result.rawData[0][2]" "=" "A3"
+  #         assert ".results[4].result.rawData[0][3]" "=" ""
+  #         assert ".results[4].result.rawData[1][0]" "=" "B1"
+  #         assert ".results[4].result.rawData[1][1]" "=" "B2"
+  #         assert ".results[4].result.rawData[1][2]" "=" "B3"
+  #         assert ".results[4].result.rawData[1][3]" "=" ""
+  #         assert ".results[4].result.rawData[2][0]" "=" ""
+  #         assert ".results[4].result.rawData[2][1]" "=" "C2"
+  #         assert ".results[4].result.rawData[2][2]" "=" "C3"
+  #         assert ".results[4].result.rawData[2][3]" "=" "C4"
+  #         assert ".results[4].result.header[0]" "=" "(A)"
+  #         assert ".results[4].result.header[1]" "=" "(B)"
+  #         assert ".results[4].result.header[2]" "=" "(C)"
+  #         assert ".results[4].result.header[3]" "=" "(D)"
 
-          echo_test_run 5
-          assert ".results[5].result.rawData[0][0]" "=" "B1"
-          assert ".results[5].result.rawData[0][1]" "=" "B2"
-          assert ".results[5].result.rawData[1][0]" "=" "" #empty string
-          assert ".results[5].result.rawData[1][1]" "=" "C2"
+  #         echo_test_run 5
+  #         assert ".results[5].result.rawData[0][0]" "=" "B1"
+  #         assert ".results[5].result.rawData[0][1]" "=" "B2"
+  #         assert ".results[5].result.rawData[1][0]" "=" "" #empty string
+  #         assert ".results[5].result.rawData[1][1]" "=" "C2"
 
-          echo "🎉 Tests successful"
+  #         echo "🎉 Tests successful"
