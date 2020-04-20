@@ -1,21 +1,28 @@
-name: 'Test and release preview version'
-on: pull_request
+name: 'Release version'
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+
       - name: 'ci'
         run: npm ci
+
       - name: 'build'
         run: npm run build
+
       - name: 'test'
         run: npm run test
         env:
           GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
           GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
           TEST_SPREADSHEET_ID: ${{ secrets.TEST_SPREADSHEET_ID }}
+
       - name: 'check for uncommitted changes'
         # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
         run: |
@@ -39,46 +46,32 @@ jobs:
           git remote rm origin
           git remote add origin $URL
 
-      - name: 'temp branch'
-        env:
-          BRANCH: ${{ format('preview/{0}', github.head_ref) }}
-        run: git checkout $BRANCH || git checkout -b $BRANCH
-
-      - name: 'cleanup node_modules'
-        run: rm -rf node_modules
+      - name: 'merge branch'
+        run: |
+          git fetch --prune
+          git checkout release || git checkout -b release
+          git merge -X theirs origin/master
+          git push origin release --force
 
       - name: 'install'
-        run: npm install --production
+        run: rm -rf node_modules && npm install --production
 
       - name: 'build'
         run: npm run build
 
       - name: 'add dependencies'
         run: |
-          sed -i '/node_modules/d' .gitignore # Bash command that removes node_modules from .gitignore
-          sed -i '/lib/d' .gitignore # Bash command that removes lib from .gitignore
+          sed -i '/node_modules/d' .gitignore # remove node_modules from .gitignore
+          sed -i '/lib/d' .gitignore # remove lib from .gitignore
           git add -A
-          git commit -m "$(git show -s --format=%s) <with-dependencies>"
+          git commit -m "<with-dependencies>" || echo "skipped commit"
+          git push origin release
 
-      - name: 'push'
-        env:
-          BRANCH: ${{ format('preview/{0}', github.head_ref) }}
+      - name: 'semantic-release'
         run: |
-          git push origin $BRANCH --force
-
-      - name: 'comment'
+          npm run semantic-release
         env:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          ISSUE_URL: ${{ format('{0}/comments', github.event.pull_request._links.issue.href) }}
-          ACTION: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
-        run: |
-          COMMENT="Preview can be used by specifying preview branch in action definition:\\n\`\`\`yaml\\n...\\nuses: $ACTION\\n...\\n\`\`\`"
-          EXISTING_COMMENT=$(curl -s $ISSUE_URL | jq -r --raw-output ".[] | select(.body == \"$COMMENT\")")
-          if [[ -z "$EXISTING_COMMENT" ]]; then
-            curl -s -H "Authorization: token $ACCESS_TOKEN" -X POST -d "{\"body\": \"$COMMENT\"}" $ISSUE_URL
-          else
-            echo "Comment already exists, nothing to do!"
-          fi
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 'cleanup branches'
         run: |
