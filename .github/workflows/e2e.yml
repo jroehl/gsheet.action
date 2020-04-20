@@ -7,10 +7,9 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    needs: release-preview
     steps:
       - id: 'run_worksheet_tests'
-        uses: '{{ USES_PREVIEW_VERSION }}'
+        uses: jroehl/gsheet.action@preview/sample-head-ref
         with:
           spreadsheetId: ${{ secrets.TEST_SPREADSHEET_ID }}
           commands: | # list of commands, specified as a valid JSON string

@@ -1,0 +1,15 @@
+{
+  "action": "opened",
+  "number": 2,
+  "pull_request": {
+    "head": {
+      "ref": "sample-head-ref",
+      "repo": {
+        "full_name": "jroehl/gsheet.action"
+      }
+    },
+    "base": {
+      "ref": "sample-base-ref"
+    }
+  }
+}
