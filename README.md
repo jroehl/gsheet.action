@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: 'update_worksheet'
-        uses: jroehl/gsheet.action@v1.0.0 # you can specify the "release" branch to have always the latest changes (dangerous)
+        uses: jroehl/gsheet.action@v1.0.0
         with:
           spreadsheetId: <spreadsheetId>
           commands: | # list of commands, specified as a valid JSON string
