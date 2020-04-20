@@ -43,33 +43,32 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup SSH Keys and known_hosts
+      - name: setup ssh keys and known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
           ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
 
-      - name: 'setup git'
+      - name: setup git
         run: |
           git config --global user.email "mail@hinterland.dev"
           git config --global user.name "jroehl"
           git remote set-url origin git@github.com:${{ github.repository }}.git
-          git fetch
+          git fetch origin --tags --force --prune
 
-      - name: 'temp branch'
-        run: git checkout $BRANCH || git checkout -b $BRANCH
+      - name: cleanup preview branch
+        run: |
+          git branch -D ${BRANCH} || true
+          git push origin --delete ${BRANCH} || true
 
-      - name: 'cleanup node_modules'
-        run: rm -rf node_modules
+      - name: create preview branch
+        run: git checkout -b ${BRANCH}
 
-      - name: 'install'
-        run: npm install --production
+      - name: install and build production dependencies
+        run: rm -rf node_modules && npm install --production && npm run build
 
-      - name: 'build'
-        run: npm run build
-
-      - name: 'replace placeholders in e2e action'
+      - name: replace placeholders in e2e action
         env:
           USES_PREVIEW_VERSION: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
           STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/', github.repository) }}
@@ -78,18 +77,19 @@ jobs:
           LAST_COMMIT_ID=$(git log --format="%H" -n 1 origin/${{ github.head_ref }})
           sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}${LAST_COMMIT_ID}|g" .github/workflows/e2e.yml
 
-      - name: 'add dependencies'
+      - name: add dependencies
         run: |
           sed -i '/node_modules/d' .gitignore # Remove node_modules from .gitignore
           sed -i '/lib/d' .gitignore # Remove lib from .gitignore
           git add -A
-          git commit -m "$(git show -s --format=%s) <with-dependencies>"
+          LAST_COMMIT_MSG=$(git show -s --format=%s origin/${{ github.head_ref }})
+          git commit -m "${LAST_COMMIT_MSG} <with-dependencies>"
 
       - name: 'push'
         run: |
           git push origin ${BRANCH} --force
 
-      - name: 'comment'
+      - name: comment in pull request
         env:
           ISSUE_URL: ${{ format('{0}/comments', github.event.pull_request._links.issue.href) }}
           ACTION: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
@@ -98,29 +98,7 @@ jobs:
           EXISTING_COMMENT=$(curl -s $ISSUE_URL | jq -r --raw-output ".[] | select(.body == \"${COMMENT}\")")
           if [[ -z "${EXISTING_COMMENT}" ]]; then
             curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"body\": \"$COMMENT\"}" $ISSUE_URL
-          else
-            echo "Comment already exists, nothing to do!"
           fi
-
-      - name: 'semantic-release'
-        run: |
-          git fetch origin --tags --force
-          npm run semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 'cleanup branches'
-        run: |
-          git fetch --prune
-          for preview_branch in $(git branch -r --list "*/preview/*"); do
-            feature_branch=$(git branch -r --list "${preview_branch/\/preview/}")
-            if [[ -z "$feature_branch" ]]; then
-              echo "Feature branch for preview \"$preview_branch\" does not exist, deleting preview branch"
-              git push origin --delete "${preview_branch/origin\//}"
-            else
-              echo "Feature branch \"$feature_branch\" for preview \"$preview_branch\" exists, nothing to do"
-            fi
-          done
 
   release:
     if: github.event_name == 'push'
@@ -128,51 +106,58 @@ jobs:
     needs: test
     env:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      BRANCH: release
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup SSH Keys and known_hosts
+      - name: setup ssh keys and known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
           ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
 
-      - name: 'setup git'
+      - name: setup git
         run: |
           git config --global user.email "mail@hinterland.dev"
           git config --global user.name "jroehl"
           git remote set-url origin git@github.com:${{ github.repository }}.git
+          git fetch origin --tags --force --prune
 
-      - name: 'merge branch'
+      - name: create temporary branch
+        run: git checkout -b ${BRANCH}
+
+      - name: install and build production dependencies
+        run: rm -rf node_modules && npm install --production && npm run build
+
+      - name: add dependencies
         run: |
-          git fetch --prune
-          git checkout release || git checkout -b release
-          git merge -X theirs origin/master
-          git push origin release --force
-
-      - name: 'install'
-        run: rm -rf node_modules && npm install --production
-
-      - name: 'build'
-        run: npm run build
-
-      - name: 'add dependencies'
-        run: |
-          sed -i '/node_modules/d' .gitignore # remove node_modules from .gitignore
-          sed -i '/lib/d' .gitignore # remove lib from .gitignore
+          sed -i '/node_modules/d' .gitignore # Remove node_modules from .gitignore
+          sed -i '/lib/d' .gitignore # Remove lib from .gitignore
           git add -A
-          git commit -m "<with-dependencies>" || echo "skipped commit"
-          git push origin release
+          LAST_COMMIT_MSG=$(git show -s --format=%s origin/${{ github.head_ref }})
+          git commit -m "${LAST_COMMIT_MSG} <with-dependencies>"
 
-      - name: 'semantic-release'
+      - name: 'push'
         run: |
-          git fetch origin --tags --force
+          git push origin ${BRANCH} --force
+
+      - name: semantic-release
+        run: |
           npm run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 'cleanup branches'
+      - name: cleanup temporary branch
+        run: |
+          git branch -D ${BRANCH} || true
+          git push origin --delete ${BRANCH} || true
+
+  cleanup:
+    if: always()
+    needs: [release, release-preview]
+    steps:
+      - name: cleanup branches
         run: |
           git fetch --prune
           for preview_branch in $(git branch -r --list "*/preview/*"); do
@@ -180,7 +165,5 @@ jobs:
             if [[ -z "$feature_branch" ]]; then
               echo "Feature branch for preview \"$preview_branch\" does not exist, deleting preview branch"
               git push origin --delete "${preview_branch/origin\//}"
-            else
-              echo "Feature branch \"$feature_branch\" for preview \"$preview_branch\" exists, nothing to do"
             fi
           done
