@@ -1,5 +1,3 @@
-- uses: actions/checkout@v1
-
 - name: 'ci'
   run: npm ci
 
