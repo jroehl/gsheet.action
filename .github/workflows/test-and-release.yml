@@ -72,9 +72,10 @@ jobs:
       - name: 'replace placeholders in e2e action'
         env:
           USES_PREVIEW_VERSION: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
+          STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/{1}', github.repository, github.sha) }}
         run: |
           sed -i "s|'{{ USES_PREVIEW_VERSION }}'|${USES_PREVIEW_VERSION}|g" .github/workflows/e2e.yml
-          sed -i "s|{{ SHA }}|${SHA}|g" .github/workflows/e2e.yml
+          sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}|g" .github/workflows/e2e.yml
 
       - name: 'add dependencies'
         run: |

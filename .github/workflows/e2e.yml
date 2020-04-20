@@ -8,7 +8,7 @@ jobs:
   e2e:
     env:
       TARGET_URL: ${{ format('https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
-      STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/{{ SHA }}', github.repository) }}
+      STATUS_URL: '{{ STATUS_URL }}'
       STATUS_CONTEXT: e2e-preview/github-actions
     runs-on: ubuntu-latest
     steps:
@@ -106,11 +106,11 @@ jobs:
       - name: create pull request status failure
         if: failure()
         run: |
-          description="E2E tests failure"
+          description="E2E tests failed"
           curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"failure\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
 
       - name: create pull request status success
         if: success()
         run: |
-          description="E2E tests success"
+          description="E2E tests succeeded"
           curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"success\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
