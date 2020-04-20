@@ -20,9 +20,9 @@ jobs:
 
       - name: 'test'
         run: npm run test
-        env:	
-          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}	
-          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}	
+        env:
+          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
+          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
           TEST_SPREADSHEET_ID: ${{ secrets.TEST_SPREADSHEET_ID }}
 
       - name: 'check for uncommitted changes'
@@ -78,6 +78,7 @@ jobs:
 
       - name: 'push'
         env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           BRANCH: ${{ format('preview/{0}', github.head_ref) }}
         run: |
           git push origin $BRANCH --force
