@@ -65,9 +65,9 @@ jobs:
 
       - name: 'replace placeholder in e2e action'
         env:
-          BRANCH: ${{ github.ref }}
+          ACTION: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
         run: |
-          sed -i "s/'{{ USES_PREVIEW_VERSION }}'/${BRANCH}/" .github/workflows/e2e.yml
+          sed -i "s|'{{ USES_PREVIEW_VERSION }}'|${ACTION}|" .github/workflows/e2e.yml
 
       - name: 'add dependencies'
         run: |
