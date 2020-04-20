@@ -40,7 +40,6 @@ jobs:
     env:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       BRANCH: ${{ format('preview/{0}', github.head_ref) }}
-      STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/{1}', github.repository, github.SHA) }}
     steps:
       - uses: actions/checkout@v2
 
@@ -72,9 +71,11 @@ jobs:
       - name: 'replace placeholders in e2e action'
         env:
           USES_PREVIEW_VERSION: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
+          STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/', github.repository) }}
         run: |
           sed -i "s|'{{ USES_PREVIEW_VERSION }}'|${USES_PREVIEW_VERSION}|g" .github/workflows/e2e.yml
-          sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}|g" .github/workflows/e2e.yml
+          LAST_COMMIT_ID=$(git log --format="%H" -n 1 ${{ github.head_ref }})
+          sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}${LAST_COMMIT_ID}|g" .github/workflows/e2e.yml
 
       - name: 'add dependencies'
         run: |
