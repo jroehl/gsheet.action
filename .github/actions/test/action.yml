@@ -1,20 +1,24 @@
-- name: 'ci'
-  run: npm ci
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: 'ci'
+        run: npm ci
 
-- name: 'build'
-  run: npm run build
+      - name: 'build'
+        run: npm run build
 
-- name: 'test'
-  run: npm run test
-  env:
-    GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
-    GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
-    TEST_SPREADSHEET_ID: ${{ secrets.TEST_SPREADSHEET_ID }}
+      - name: 'test'
+        run: npm run test
+        env:
+          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
+          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+          TEST_SPREADSHEET_ID: ${{ secrets.TEST_SPREADSHEET_ID }}
 
-- name: 'check for uncommitted changes'
-  # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
-  run: |
-    git diff --exit-code --stat -- . ':!node_modules' \
-    || (echo "##[error] found changed files after build. please 'npm run build && npm run format'" \
-              "and check in all changes" \
-        && exit 1)
+      - name: 'check for uncommitted changes'
+        # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
+        run: |
+          git diff --exit-code --stat -- . ':!node_modules' \
+          || (echo "##[error] found changed files after build. please 'npm run build && npm run format'" \
+                    "and check in all changes" \
+              && exit 1)
