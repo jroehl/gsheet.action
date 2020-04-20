@@ -1,0 +1,25 @@
+name: 'gsheet.action'
+description: 'This action helps in CRUD operations on a google sheet.'
+author: 'jroehl <mail@johannroehl.de>'
+branding:
+  icon: book
+  color: green
+inputs:
+  spreadsheetId:
+    description: 'The id of the spreadsheet to use'
+    required: true
+  commands:
+    description: |
+      'The commands and arguments to use as an array - must be a valid json string
+      e.g.
+      [
+        { "command": "addWorksheet", "args": { "worksheetTitle": "test" }},
+        { "command": "updateData", "args": { "data": [["A1", "A2", "A3"]] }}
+      ]'
+    required: true
+outputs:
+  results:
+    description: 'The results of all commands as an array'
+runs:
+  using: 'node12'
+  main: 'lib/main.js'

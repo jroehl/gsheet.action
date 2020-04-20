@@ -1,0 +1,44 @@
+{
+  "name": "gsheet.action",
+  "version": "0.0.0",
+  "description": "A github action to help with CRUD operations on google sheets.",
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "tsc",
+    "document": "tsc src/bin/* --outDir lib && node ./lib/bin/documentation.js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch --coverage",
+    "semantic-release": "semantic-release"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jroehl/gsheet.action.git"
+  },
+  "keywords": [
+    "actions",
+    "node",
+    "setup"
+  ],
+  "author": "jroehl <mail@johannroehl.de>",
+  "license": "MIT",
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run document"
+    }
+  },
+  "dependencies": {
+    "@actions/core": "^1.2.3",
+    "google-sheet-cli": "^1.2.2",
+    "google-spreadsheet": "^3.0.10",
+    "husky": "^4.2.3",
+    "semantic-release": "^15.14.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^25.2.1",
+    "@types/node": "^13.11.0",
+    "jest": "^25.2.7",
+    "jest-circus": "^25.2.7",
+    "ts-jest": "^25.3.1",
+    "typescript": "^3.8.3"
+  }
+}
