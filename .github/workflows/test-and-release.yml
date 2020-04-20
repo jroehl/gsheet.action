@@ -158,6 +158,8 @@ jobs:
     needs: [release, release-preview]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+
       - name: cleanup branches
         run: |
           git fetch --prune
