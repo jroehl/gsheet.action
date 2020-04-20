@@ -74,7 +74,7 @@ jobs:
           STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/', github.repository) }}
         run: |
           sed -i "s|'{{ USES_PREVIEW_VERSION }}'|${USES_PREVIEW_VERSION}|g" .github/workflows/e2e.yml
-          LAST_COMMIT_ID=$(git log --format="%H" -n 1 ${{ github.head_ref }})
+          LAST_COMMIT_ID=$(git log --format="%H" -n 1 origin/${{ github.head_ref }})
           sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}${LAST_COMMIT_ID}|g" .github/workflows/e2e.yml
 
       - name: 'add dependencies'
