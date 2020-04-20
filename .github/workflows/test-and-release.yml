@@ -135,7 +135,7 @@ jobs:
           sed -i '/node_modules/d' .gitignore # Remove node_modules from .gitignore
           sed -i '/lib/d' .gitignore # Remove lib from .gitignore
           git add -A
-          LAST_COMMIT_MSG=$(git show -s --format=%s origin/${{ github.head_ref }})
+          LAST_COMMIT_MSG=$(git show -s --format=%s origin/master)
           git commit -m "${LAST_COMMIT_MSG} <with-dependencies>"
 
       - name: 'push'
