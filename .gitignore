@@ -1,6 +1,6 @@
 node_modules
 __tests__/runner/*
 
-.envrc
+.env*
 coverage
 lib
