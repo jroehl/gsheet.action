@@ -42,6 +42,7 @@ jobs:
       BRANCH_PREVIEW: ${{ format('preview/{0}', github.head_ref) }}
       MERGE_RELEASE: master
       MERGE_PREVIEW: ${{ github.head_ref }}
+      ACTION_RELEASE: ${{ format('{0}@release', github.repository) }}
       ACTION_PREVIEW: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
       IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
     steps:
@@ -52,10 +53,13 @@ jobs:
           if [[ "${IS_PULL_REQUEST}" == "true" ]]; then 
             BRANCH="${BRANCH_PREVIEW}"
             MERGE_BRANCH="${MERGE_PREVIEW}"
+            ACTION="${ACTION_PREVIEW}"
           else
             BRANCH="${BRANCH_RELEASE}"
             MERGE_BRANCH="${MERGE_RELEASE}"
+            ACTION="${ACTION_RELEASE}"
           fi
+          echo "::set-env name=ACTION::${ACTION}"
           echo "::set-env name=BRANCH::${BRANCH}"
           echo "::set-env name=MERGE_BRANCH::${MERGE_BRANCH}"
 
@@ -82,11 +86,10 @@ jobs:
         run: npm ci --production && npm run build
 
       - name: replace placeholders in e2e action
-        if: ${{ env.IS_PULL_REQUEST == 'true' }}
         env:
           STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/', github.repository) }}
         run: |
-          sed -i "s|'{{ USES_PREVIEW_VERSION }}'|${ACTION_PREVIEW}|g" .github/workflows/e2e.yml
+          sed -i "s|'{{ USES_PREVIEW_VERSION }}'|${ACTION}|g" .github/workflows/e2e.yml
           last_commit_id=$(git log --format="%H" -n 1 origin/${MERGE_BRANCH})
           sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}${last_commit_id}|g" .github/workflows/e2e.yml
 
@@ -102,20 +105,12 @@ jobs:
         run: |
           git push origin ${BRANCH} --force
 
-      - name: semantic-release
-        run: |
-          git checkout ${BRANCH}
-          git fetch origin --tags --force --prune
-          npm run semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: comment in pull request
         if: ${{ env.IS_PULL_REQUEST == 'true' }}
         env:
           ISSUE_URL: ${{ format('{0}/comments', github.event.pull_request._links.issue.href) }}
         run: |
-          comment="Preview can be used by specifying preview branch in action definition:\\n\`\`\`yaml\\n...\\nuses: ${ACTION_PREVIEW}\\n...\\n\`\`\`"
+          comment="Preview can be used by specifying preview branch in action definition:\\n\`\`\`yaml\\n...\\nuses: ${ACTION}\\n...\\n\`\`\`"
           existing_comment=$(curl -s ${ISSUE_URL} | jq -r --raw-output ".[] | select(.body == \"${comment}\")")
           if [[ -z "${existing_comment}" ]]; then
             curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"body\": \"${comment}\"}" ${ISSUE_URL}
