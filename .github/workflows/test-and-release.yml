@@ -40,6 +40,8 @@ jobs:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       BRANCH_RELEASE: release
       BRANCH_PREVIEW: ${{ format('preview/{0}', github.head_ref) }}
+      MERGE_RELEASE: master
+      MERGE_PREVIEW: ${{ github.head_ref }}
       ACTION_PREVIEW: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
       IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
     steps:
@@ -47,8 +49,15 @@ jobs:
 
       - name: set branch name
         run: |
-          [[ ${IS_PULL_REQUEST} ]] && BRANCH="${BRANCH_PREVIEW}" || BRANCH="${BRANCH_RELEASE}"
+          if [[ "${IS_PULL_REQUEST}" == "true" ]]; then 
+            BRANCH="${BRANCH_PREVIEW}"
+            MERGE_BRANCH="${MERGE_PREVIEW}"
+          else
+            BRANCH="${BRANCH_RELEASE}"
+            MERGE_BRANCH="${MERGE_RELEASE}"
+          fi
           echo "::set-env name=BRANCH::${BRANCH}"
+          echo "::set-env name=MERGE_BRANCH::${MERGE_BRANCH}"
 
       - name: setup ssh keys and known_hosts
         run: |
@@ -67,7 +76,7 @@ jobs:
       - name: create or checkout branch
         run: |
           git checkout ${BRANCH} || git checkout -b ${BRANCH}
-          git merge -X theirs origin/master
+          git merge -X theirs origin/${MERGE_BRANCH}
 
       - name: install and build production dependencies
         run: npm ci --production && npm run build
@@ -78,7 +87,7 @@ jobs:
           STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/', github.repository) }}
         run: |
           sed -i "s|'{{ USES_PREVIEW_VERSION }}'|${ACTION_PREVIEW}|g" .github/workflows/e2e.yml
-          last_commit_id=$(git log --format="%H" -n 1 origin/${{ github.head_ref }})
+          last_commit_id=$(git log --format="%H" -n 1 origin/${MERGE_BRANCH})
           sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}${last_commit_id}|g" .github/workflows/e2e.yml
 
       - name: add dependencies and build
@@ -86,7 +95,7 @@ jobs:
           sed -i '/node_modules/d' .gitignore # Remove node_modules from .gitignore
           sed -i '/lib/d' .gitignore # Remove lib from .gitignore
           git add -A
-          last_commit_msg=$(git show -s --format=%s origin/master)
+          last_commit_msg=$(git show -s --format=%s origin/${MERGE_BRANCH})
           git commit -m "${last_commit_msg} <with-dependencies>"
 
       - name: push
