@@ -71,7 +71,7 @@ jobs:
           git config --global user.email "mail@hinterland.dev"
           git config --global user.name "jroehl"
           git remote set-url origin git@github.com:${{ github.repository }}.git
-          git fetch --prune
+          git fetch origin --tags --force --prune
 
       - name: create or checkout branch
         run: |
@@ -104,6 +104,7 @@ jobs:
 
       - name: semantic-release
         run: |
+          git fetch origin --tags --force --prune
           npm run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
