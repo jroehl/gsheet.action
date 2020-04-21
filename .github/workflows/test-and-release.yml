@@ -40,7 +40,7 @@ jobs:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       BRANCH_RELEASE: release
       BRANCH_PREVIEW: ${{ format('preview/{0}', github.head_ref) }}
-      ACTION_PREVIEW: ${{ format('{0}@{1}', github.repository, env.BRANCH_PREVIEW) }}
+      ACTION_PREVIEW: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
       IS_PULL_REQUEST: ${{ github.event_name == "pull_request" }}
     steps:
       - uses: actions/checkout@v2
