@@ -82,7 +82,7 @@ jobs:
         run: npm ci --production && npm run build
 
       - name: replace placeholders in e2e action
-        if: ${{ env.IS_PULL_REQUEST }}
+        if: ${{ env.IS_PULL_REQUEST == 'true' }}
         env:
           STATUS_URL: ${{ format('https://api.github.com/repos/{0}/statuses/', github.repository) }}
         run: |
@@ -109,7 +109,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: comment in pull request
-        if: ${{ env.IS_PULL_REQUEST }}
+        if: ${{ env.IS_PULL_REQUEST == 'true' }}
         env:
           ISSUE_URL: ${{ format('{0}/comments', github.event.pull_request._links.issue.href) }}
         run: |
