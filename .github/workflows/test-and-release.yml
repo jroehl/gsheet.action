@@ -76,7 +76,7 @@ jobs:
       - name: create or checkout branch
         run: |
           git checkout ${BRANCH} || git checkout -b ${BRANCH}
-          git merge -X theirs origin/${MERGE_BRANCH}
+          git merge -X theirs origin/${MERGE_BRANCH} --allow-unrelated-histories
 
       - name: install and build production dependencies
         run: npm ci --production && npm run build
