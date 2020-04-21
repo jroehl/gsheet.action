@@ -104,6 +104,7 @@ jobs:
 
       - name: semantic-release
         run: |
+          git checkout ${BRANCH}
           git fetch origin --tags --force --prune
           npm run semantic-release
         env:
