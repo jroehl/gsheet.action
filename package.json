@@ -28,16 +28,16 @@
   },
   "dependencies": {
     "@actions/core": "^1.2.4",
-    "google-sheet-cli": "^1.4.0",
+    "google-sheet-cli": "^1.4.1",
     "google-spreadsheet": "^3.0.11",
     "husky": "^4.2.5",
     "semantic-release": "^17.0.7"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",
-    "@types/node": "^13.13.4",
-    "jest": "^25.5.4",
-    "jest-circus": "^26.0.0",
+    "@types/node": "^13.13.5",
+    "jest": "^26.0.1",
+    "jest-circus": "^26.0.1",
     "ts-jest": "^25.5.0",
     "typescript": "^3.8.3"
   }
