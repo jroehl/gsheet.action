@@ -1,13 +1,13 @@
 import run, { Results } from '../src/main';
 import * as core from '@actions/core';
 
-const worksheetTitle = `test-action-${Date.now()}`;
+const worksheetTitle = `gsheet.action-test-${Date.now()}`;
 let commands: string;
 
 jest.mock('@actions/core', () => {
   return {
     getInput: jest.fn().mockImplementation(
-      key =>
+      (key) =>
         ({
           spreadsheetId: process.env.TEST_SPREADSHEET_ID,
           commands,

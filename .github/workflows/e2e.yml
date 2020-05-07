@@ -23,13 +23,13 @@ jobs:
           spreadsheetId: ${{ secrets.TEST_SPREADSHEET_ID }}
           commands: | # list of commands, specified as a valid JSON string
             [
-              { "command": "addWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests>" }},
+              { "command": "addWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_${{ github.sha }}>" }},
               { "command": "updateData", "args": { "data": [["A1", "A2", "A3"]] }},
               { "command": "appendData", "args": { "data": [["B1", "B2", "B3"]], "minCol": 1 }},
               { "command": "appendData", "args": { "data": [["C2", "C3", "C4"]], "minCol": 2 }},
               { "command": "getData", "args": { "minCol": 1 } },
-              { "command": "getData", "args": { "range": "<gsheet.action_e2e-tests>!A2:B3" } },
-              { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests>" }}
+              { "command": "getData", "args": { "range": "<gsheet.action_e2e-tests_${{ github.sha }}>!A2:B3" } },
+              { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_${{ github.sha }}>" }}
             ]
         env:
           GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
@@ -61,7 +61,7 @@ jobs:
           assert ".results | length" "-eq" "7"
 
           echo_test_run 0
-          assert ".results[0].result.properties.title" "=" "<gsheet.action_e2e-tests>"
+          assert ".results[0].result.properties.title" "=" "<gsheet.action_e2e-tests_${{ github.sha }}>"
 
           echo_test_run 1
           assert ".results[1].command.kwargs[0][0][0]" "=" "A1"
