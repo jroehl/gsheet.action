@@ -30,7 +30,7 @@
     "@actions/core": "^1.2.5",
     "google-sheet-cli": "^1.4.1",
     "google-spreadsheet": "^3.0.13",
-    "husky": "^4.2.5",
+    "husky": "^4.3.0",
     "semantic-release": "^17.1.1"
   },
   "devDependencies": {
