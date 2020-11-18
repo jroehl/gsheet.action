@@ -93,8 +93,8 @@ jobs:
           git checkout ${BRANCH} || git checkout -b ${BRANCH}
           git merge -X theirs origin/${MERGE_BRANCH} --allow-unrelated-histories
 
-      - name: install and build production dependencies
-        run: npm ci --production && npm run build
+      - name: install and build dependencies
+        run: npm ci && npm run build
 
       - name: replace placeholders in e2e action
         env:
