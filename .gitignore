@@ -4,3 +4,5 @@ __tests__/runner/*
 .env*
 coverage
 lib
+
+.github/workflows/local-test.yml
