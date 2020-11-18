@@ -69,9 +69,10 @@ jobs:
             MERGE_BRANCH="${MERGE_RELEASE}"
             ACTION="${ACTION_RELEASE}"
           fi
-          echo "::set-env name=ACTION::${ACTION}"
-          echo "::set-env name=BRANCH::${BRANCH}"
-          echo "::set-env name=MERGE_BRANCH::${MERGE_BRANCH}"
+
+          echo "ACTION=${ACTION}" >> ${GITHUB_ENV}
+          echo "BRANCH=${BRANCH}" >> ${GITHUB_ENV}
+          echo "MERGE_BRANCH=${MERGE_BRANCH}" >> ${GITHUB_ENV}
 
       - name: setup ssh keys and known_hosts
         run: |
