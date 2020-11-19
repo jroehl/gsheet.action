@@ -1,20 +1,22 @@
-import config from '../config';
+import config from '../src/config';
 import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 const readmePath = resolve(__dirname, '..', '..', 'README.md');
 const README = readFileSync(readmePath, 'utf8');
 const split = README.split('\n');
-const start = split.findIndex(line => line.includes('<!-- commands -->')) + 1;
-const end = split.findIndex(line => line.includes('<!-- commandsstop -->'));
+const start = split.findIndex((line) => line.includes('<!-- commands -->')) + 1;
+const end = split.findIndex((line) => line.includes('<!-- commandsstop -->'));
 
-const map = (array?: string[], required: boolean = true): string =>
+const map = (array?: string[], required = true): string =>
   !array
     ? ''
     : `${array
-        .map(key => {
+        .map((key) => {
           const { type, description, def } = config.descriptions[key];
-          return `- ${required ? key : `[${key}${def ? `=${def}` : ''}]?`}:${type} - ${description}`;
+          return `- ${
+            required ? key : `[${key}${def ? `=${def}` : ''}]?`
+          }:${type} - ${description}`;
         })
         .join('\n  ')}\n  `;
 

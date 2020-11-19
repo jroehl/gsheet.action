@@ -22,4 +22,4 @@ outputs:
     description: 'The results of all commands as an array'
 runs:
   using: 'node12'
-  main: 'lib/main.js'
+  main: 'dist/index.js'

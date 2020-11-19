@@ -21,11 +21,13 @@ interface Description {
 const descriptions: { [arg: string]: Description } = {
   [Arg.worksheetTitle]: {
     type: 'string',
-    description: 'The title of the worksheet (needed if no previous command set the worksheetTitle globally)',
+    description:
+      'The title of the worksheet (needed if no previous command set the worksheetTitle globally)',
   },
   [Arg.spreadsheetId]: {
     type: 'string',
-    description: 'The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)',
+    description:
+      'The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)',
   },
   [Arg.spreadsheetTitle]: {
     type: 'string',
@@ -38,7 +40,8 @@ const descriptions: { [arg: string]: Description } = {
   },
   [Arg.data]: {
     type: 'string',
-    description: 'The data to be used as a JSON string - nested array [["1", "2", "3"]]',
+    description:
+      'The data to be used as a JSON string - nested array [["1", "2", "3"]]',
   },
   [Arg.range]: {
     type: 'string',
@@ -98,7 +101,8 @@ const config: {
   commands: {
     [Func.addSpreadsheet]: {
       func: Func.addSpreadsheet,
-      description: 'Add a spreadsheet with the specified title to the spreadsheet',
+      description:
+        'Add a spreadsheet with the specified title to the spreadsheet',
       args: {
         required: [Arg.spreadsheetTitle],
       },
@@ -112,7 +116,8 @@ const config: {
     },
     [Func.addWorksheet]: {
       func: Func.addWorksheet,
-      description: 'Add a worksheet with the specified title to the spreadsheet',
+      description:
+        'Add a worksheet with the specified title to the spreadsheet',
       args: {
         required: [Arg.worksheetTitle],
         optional: [Arg.spreadsheetId],
@@ -136,21 +141,34 @@ const config: {
     },
     [Func.updateData]: {
       func: Func.updateData,
-      description: 'Updates cells with the specified data (at the specified range)',
+      description:
+        'Updates cells with the specified data (at the specified range)',
       args: {
         required: [Arg.data],
         optional: [Arg.spreadsheetId],
       },
-      options: [Arg.minRow, Arg.minCol, Arg.range, Arg.valueInputOption, Arg.worksheetTitle],
+      options: [
+        Arg.minRow,
+        Arg.minCol,
+        Arg.range,
+        Arg.valueInputOption,
+        Arg.worksheetTitle,
+      ],
     },
     [Func.appendData]: {
       func: Func.appendData,
-      description: 'Append cells with the specified data after the last row (in starting col)',
+      description:
+        'Append cells with the specified data after the last row (in starting col)',
       args: {
         required: [Arg.data],
         optional: [Arg.spreadsheetId],
       },
-      options: [Arg.minCol, Arg.range, Arg.valueInputOption, Arg.worksheetTitle],
+      options: [
+        Arg.minCol,
+        Arg.range,
+        Arg.valueInputOption,
+        Arg.worksheetTitle,
+      ],
     },
     [Func.getData]: {
       func: Func.getData,
@@ -158,7 +176,15 @@ const config: {
       args: {
         optional: [Arg.spreadsheetId],
       },
-      options: [Arg.minRow, Arg.minCol, Arg.maxRow, Arg.maxCol, Arg.range, Arg.hasHeaderRow, Arg.worksheetTitle],
+      options: [
+        Arg.minRow,
+        Arg.minCol,
+        Arg.maxRow,
+        Arg.maxCol,
+        Arg.range,
+        Arg.hasHeaderRow,
+        Arg.worksheetTitle,
+      ],
     },
   },
 };
