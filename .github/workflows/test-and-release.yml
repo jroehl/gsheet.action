@@ -94,7 +94,7 @@ jobs:
           git merge -X theirs origin/${MERGE_BRANCH} --allow-unrelated-histories
 
       - name: install and build dependencies
-        run: npm ci && npm run build
+        run: npm ci && npm run build && npm run package
 
       - name: replace placeholders in e2e action
         env:
@@ -104,11 +104,10 @@ jobs:
           last_commit_id=$(git log --format="%H" -n 1 origin/${MERGE_BRANCH})
           sed -i "s|STATUS_URL:.*|STATUS_URL: ${STATUS_URL}${last_commit_id}|g" .github/workflows/e2e.yml
 
-      - name: add dependencies and build
+      - name: add dist to branch
         run: |
-          sed -i '/node_modules/d' .gitignore # Remove node_modules from .gitignore
-          sed -i '/lib/d' .gitignore # Remove lib from .gitignore
-          git add -A
+          sed -i '/dist/d' .gitignore # Remove node_modules from .gitignore
+          git add dist
           last_commit_msg=$(git show -s --format=%s origin/${MERGE_BRANCH})
           git commit -m "${last_commit_msg} <with-dependencies>"
 
