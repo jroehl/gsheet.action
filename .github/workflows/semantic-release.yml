@@ -13,6 +13,6 @@ jobs:
       - name: semantic-release
         run: |
           git fetch origin --tags --force --prune
-          npm run semantic-release
+          npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
