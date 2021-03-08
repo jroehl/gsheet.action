@@ -8,7 +8,7 @@ jobs:
   e2e:
     env:
       TARGET_URL: ${{ format('https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
-      STATUS_URL: https://api.github.com/repos/jroehl/gsheet.action/statuses/f77b01c7a2e980b739933b44729f0ffb31eaed9c
+      STATUS_URL: '{{ STATUS_URL }}'
       STATUS_CONTEXT: e2e-preview/github-actions
     runs-on: ubuntu-latest
     steps:
