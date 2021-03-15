@@ -14,7 +14,8 @@
     "test": "jest --coverage",
     "all": "npm run clean && pm run build && npm run format && npm run lint && npm run package && npm test",
     "test:watch": "jest --watch --coverage",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -27,11 +28,6 @@
   ],
   "author": "jroehl <mail@johannroehl.de>",
   "license": "MIT",
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run document"
-    }
-  },
   "dependencies": {
     "@actions/core": "^1.2.6",
     "eslint-config-prettier": "^8.1.0",
