@@ -29,7 +29,7 @@
   "author": "jroehl <mail@johannroehl.de>",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.2.7",
+    "@actions/core": "^1.3.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
     "google-sheet-cli": "^1.4.1",
