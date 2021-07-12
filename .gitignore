@@ -78,7 +78,6 @@ typings/
 .nuxt
 
 # vuepress build output
-.vuepress/dist
 
 # Serverless directories
 .serverless/
@@ -99,4 +98,3 @@ lib/**/*
 
 .github/workflows/local-test.yml
 
-dist
