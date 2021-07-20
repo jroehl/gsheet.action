@@ -1,6 +1,6 @@
 name: 'Test and release (preview) version'
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - '**'
   push:
@@ -34,7 +34,7 @@ jobs:
               && exit 1)
 
   auto-approve:
-    if: ${{ github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
     runs-on: ubuntu-latest
     needs: test
     steps:
