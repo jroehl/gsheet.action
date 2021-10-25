@@ -34,7 +34,7 @@
     "eslint-plugin-prettier": "^3.4.0",
     "google-sheet-cli": "^1.6.0",
     "google-spreadsheet": "^3.1.15",
-    "husky": "^7.0.1",
+    "husky": "^7.0.4",
     "semantic-release": "^17.4.7"
   },
   "devDependencies": {
