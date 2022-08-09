@@ -109,7 +109,7 @@ Updates cells with the specified data (at the specified range)
   - data:string - The data to be used as a JSON string - nested array [["1", "2", "3"]]
   - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
   - [minRow=1]?:number - Starting row of the operation
-  - [minCol=1]?:number - Starting row of the operation
+  - [minCol=1]?:number - Starting column of the operation
   - [range]?:string - Range in a1 notation to be used for the operation
   - [valueInputOption=RAW]?:string - The input value to be used
   - [worksheetTitle]?:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
@@ -121,7 +121,7 @@ Append cells with the specified data after the last row (in starting col)
 - args
   - data:string - The data to be used as a JSON string - nested array [["1", "2", "3"]]
   - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
-  - [minCol=1]?:number - Starting row of the operation
+  - [minCol=1]?:number - Starting column of the operation
   - [range]?:string - Range in a1 notation to be used for the operation
   - [valueInputOption=RAW]?:string - The input value to be used
   - [worksheetTitle]?:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
@@ -133,9 +133,9 @@ Get cell data (within specified range)
 - args
   - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
   - [minRow=1]?:number - Starting row of the operation
-  - [minCol=1]?:number - Starting row of the operation
+  - [minCol=1]?:number - Starting column of the operation
   - [maxRow]?:number - Last row of the operation
-  - [maxCol]?:number - Last row of the operation
+  - [maxCol]?:number - Last column of the operation
   - [range]?:string - Range in a1 notation to be used for the operation
   - [hasHeaderRow]?:boolean - If the first row should be treated as header row
   - [worksheetTitle]?:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
