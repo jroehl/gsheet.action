@@ -29,6 +29,11 @@ Secrets required as environment variables
 - GSHEET_CLIENT_EMAIL (email of the service account that has permission to access the spreadsheet)
 - GSHEET_PRIVATE_KEY (private key of the service account that has permission to access the spreadsheet)
 
+In order to get these credentials you will need to:
+1. Create a project in the Google Developer Console with permissions for Google Sheets API
+2. Create a Service Account for this project
+3. Generate a key for the service account in JSON format and download the file. Inside will be the `client_email` and `private_key`
+
 ### Setup in github action workflow (v2)
 
 ```yaml
