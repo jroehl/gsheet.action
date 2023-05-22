@@ -1,6 +1,6 @@
-import { getInput, setOutput, debug, setFailed } from '@actions/core';
-import { validateCommands, asyncForEach, ValidatedCommand } from './lib';
+import { debug, getInput, setFailed, setOutput } from '@actions/core';
 import GoogleSheet from 'google-sheet-cli/lib/lib/google-sheet';
+import { ValidatedCommand, asyncForEach, validateCommands } from './lib';
 
 export interface Result {
   command: ValidatedCommand;
@@ -46,11 +46,13 @@ export default async function run(): Promise<Results> {
     );
 
     setOutput('results', JSON.stringify({ results }));
+    // eslint-disable-next-line i18n-text/no-en
     debug(`Processed commands\n${JSON.stringify(results, null, 2)}`);
     return { results };
   } catch (error) {
-    setFailed(error.message || error);
-    return { error, results: [] };
+    const err = error as Error;
+    setFailed(err.message || err);
+    return { error: err, results: [] };
   }
 }
 
