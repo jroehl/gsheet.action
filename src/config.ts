@@ -49,7 +49,7 @@ const descriptions: { [arg: string]: Description } = {
   },
   [Arg.minCol]: {
     type: 'number',
-    description: 'Starting row of the operation',
+    description: 'Starting column of the operation',
     def: '1',
   },
   [Arg.minRow]: {
@@ -59,7 +59,7 @@ const descriptions: { [arg: string]: Description } = {
   },
   [Arg.maxCol]: {
     type: 'number',
-    description: 'Last row of the operation',
+    description: 'Last column of the operation',
   },
   [Arg.maxRow]: {
     type: 'number',
