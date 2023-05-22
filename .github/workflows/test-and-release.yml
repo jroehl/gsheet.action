@@ -65,25 +65,22 @@ jobs:
       MERGE_PREVIEW: ${{ github.head_ref }}
       ACTION_RELEASE: ${{ format('{0}@release', github.repository) }}
       ACTION_PREVIEW: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
-      IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@v3
 
-      - name: set branch name
+      - name: set preview branch name
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
         run: |
-          if [[ "${IS_PULL_REQUEST}" == "true" ]]; then 
-            BRANCH="${BRANCH_PREVIEW}"
-            MERGE_BRANCH="${MERGE_PREVIEW}"
-            ACTION="${ACTION_PREVIEW}"
-          else
-            BRANCH="${BRANCH_RELEASE}"
-            MERGE_BRANCH="${MERGE_RELEASE}"
-            ACTION="${ACTION_RELEASE}"
-          fi
-
-          echo "ACTION=${ACTION}" >> ${GITHUB_ENV}
-          echo "BRANCH=${BRANCH}" >> ${GITHUB_ENV}
-          echo "MERGE_BRANCH=${MERGE_BRANCH}" >> ${GITHUB_ENV}
+          echo "ACTION=${ACTION_PREVIEW}" >> ${GITHUB_ENV}
+          echo "BRANCH=${BRANCH_PREVIEW}" >> ${GITHUB_ENV}
+          echo "MERGE_BRANCH=${MERGE_PREVIEW}" >> ${GITHUB_ENV}
+      
+      - name: set release branch name
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          echo "ACTION=${ACTION_RELEASE}" >> ${GITHUB_ENV}
+          echo "BRANCH=${BRANCH_RELEASE}" >> ${GITHUB_ENV}
+          echo "MERGE_BRANCH=${MERGE_RELEASE}" >> ${GITHUB_ENV}
 
       - name: setup ssh keys and known_hosts
         run: |
@@ -131,7 +128,7 @@ jobs:
           git push origin ${BRANCH} --force
 
       - name: comment in pull request
-        if: ${{ env.IS_PULL_REQUEST == 'true' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
         env:
           ISSUE_URL: ${{ format('{0}/comments', github.event.pull_request._links.issue.href) }}
         run: |
