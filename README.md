@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: 'update_worksheet'
-        uses: jroehl/gsheet.action@v1.0.0 # you can specify '@release' to always have the latest changes
+        uses: jroehl/gsheet.action@v2.0.0 # you can specify '@release' to always have the latest changes
         with:
           spreadsheetId: <spreadsheetId>
           commands: | # list of commands, specified as a valid JSON string
