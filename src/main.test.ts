@@ -1,5 +1,5 @@
-import run, { Results } from './main';
 import * as core from '@actions/core';
+import run, { Results } from './main';
 
 const worksheetTitle = `gsheet.action-test-${Date.now()}`;
 let commands: string;

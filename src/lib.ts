@@ -1,4 +1,4 @@
-import config, { Command, Arg } from './config';
+import config, { Arg, Command } from './config';
 
 export interface ActionCommand {
   command: string;
@@ -32,15 +32,15 @@ export const asyncForEach = async <T>(
  * @param {string} arg
  * @returns {(string | object)}
  */
-const initParse = (args: Arg) => (
-  arg: string
-): string | Record<string, unknown> => {
-  try {
-    return JSON.parse(args[arg]);
-  } catch (_) {
-    return args[arg];
-  }
-};
+const initParse =
+  (args: Arg) =>
+  (arg: string): string | Record<string, unknown> => {
+    try {
+      return JSON.parse(args[arg]);
+    } catch (_) {
+      return args[arg];
+    }
+  };
 
 /**
  * Validate the commands as a string and return valid command array
@@ -53,7 +53,9 @@ export const validateCommands = (commandString: string): ValidatedCommand[] => {
   try {
     commands = JSON.parse(commandString);
   } catch (err) {
-    throw new Error(`"commands" input has to be valid JSON (${err.message})`);
+    throw new Error(
+      `"commands" input has to be valid JSON (${(err as Error).message})`
+    );
   }
   const validated: ValidatedCommand[] = commands.map(({ command, args }) => {
     const trimmed = command.trim();

@@ -7,11 +7,22 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
       - name: 'ci'
         run: npm ci
 
@@ -38,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: hmarr/auto-approve-action@v2.0.0
+      - uses: hmarr/auto-approve-action@v3
         if: github.actor == 'dependabot[bot]' || github.actor == 'dependabot-preview[bot]'
         with:
           github-token: '${{ secrets.GITHUB_TOKEN }}'
@@ -56,7 +67,7 @@ jobs:
       ACTION_PREVIEW: ${{ format('{0}@preview/{1}', github.repository, github.head_ref) }}
       IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: set branch name
         run: |
@@ -92,6 +103,11 @@ jobs:
         run: |
           git checkout ${BRANCH} || git checkout -b ${BRANCH}
           git merge -X theirs origin/${MERGE_BRANCH} --allow-unrelated-histories
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
 
       - name: install and build dependencies
         run: npm ci && npm run build && npm run package
@@ -130,7 +146,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: cleanup branches
         run: |
