@@ -12,9 +12,6 @@ updates:
   - dependency-name: eslint
     versions:
     - 7.24.0
-  - dependency-name: "@vercel/ncc"
-    versions:
-    - 0.28.2
   - dependency-name: "@types/jest"
     versions:
     - 26.0.21

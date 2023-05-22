@@ -16,7 +16,7 @@ jobs:
         run: |
           description="E2E tests pending"
           curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"pending\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - id: 'run_worksheet_tests'
         uses: './'
         with:
