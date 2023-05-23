@@ -1,15 +1,15 @@
 # gsheet.action
 
-A github action to help with CRUD operations on google sheets.
+gsheet.action is a GitHub action designed to facilitate Create, Read, Update, and Delete (CRUD) operations on Google Sheets directly from your GitHub workflows.
 
 - [gsheet.action](#gsheetaction)
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
-    - [Setup of credentials](#setup-of-credentials)
+    - [Setup of Credentials](#setup-of-credentials)
       - [Step 1: Setting Up Google Service Account](#step-1-setting-up-google-service-account)
       - [Step 2: Sharing the Spreadsheet](#step-2-sharing-the-spreadsheet)
       - [Step 3: Setting Up the GitHub Action](#step-3-setting-up-the-github-action)
-    - [Setup in github action workflow (v2)](#setup-in-github-action-workflow-v2)
+    - [Setup in GitHub Action Workflow](#setup-in-github-action-workflow)
   - [Supported commands](#supported-commands)
     - [addSpreadsheet](#addspreadsheet)
     - [getSpreadsheet](#getspreadsheet)
@@ -26,33 +26,40 @@ A github action to help with CRUD operations on google sheets.
 
 ## Getting Started
 
+Before you start using the gsheet.action, some preliminary setup is required.
+
 ### Prerequisites
 
-Secrets required as environment variables
+The action requires the following environment variables:
 
-- GSHEET_CLIENT_EMAIL (email of the service account that has permission to access the spreadsheet)
-- GSHEET_PRIVATE_KEY (private key of the service account that has permission to access the spreadsheet)
+- `GSHEET_CLIENT_EMAIL`: The email of the service account that has permission to access the Google Spreadsheet.
+- `GSHEET_PRIVATE_KEY`: The private key of the service account that has permission to access the Google Spreadsheet.
 
-### Setup of credentials
+These secrets should be stored as environment variables in your GitHub repository.
+
+### Setup of Credentials
 
 #### Step 1: Setting Up Google Service Account
 
-1. Login to Google API Console: Visit the Google Cloud Console website (https://console.cloud.google.com/) and log in using your Google account credentials.
-2. Enable Google Sheets API: In the Google Cloud Console, navigate to the "Library" section. Here, search for "Google Sheets API" and enable it.
-3. Create a Service Account: Next, go to the "Credentials" section. Here, click on the "Create Credentials" dropdown button and select "Service Account". There's no need to assign any special role to this service account. Simply follow the prompts to create the account.
-4. Download Credentials: Once the service account is created, a JSON file containing the credentials of the service account will be automatically generated. Download this file and keep it safe. You will need the `client_email` and `private_key` from this file to setup the Google Sheets Action.
+1. Login to [Google API Console](https://console.cloud.google.com/) using your Google account.
+2. Navigate to the "Library" section and enable the Google Sheets API.
+3. Go to the "Credentials" section, click on the "Create Credentials" dropdown button and select "Service Account".
+4. Once the service account is created, a JSON file with the service account's credentials will be automatically generated. Download this file; you will need the `client_email` and `private_key`.
 
 #### Step 2: Sharing the Spreadsheet
 
-1. Share Spreadsheet: Go to the Google Spreadsheet that you want to use with this action. Click on the "Share" button (usually at the top right corner) and in the sharing settings, add the `client_email` (that you got from the downloaded JSON file) with read permissions.
-2. Get Document ID: The document ID is the string of random characters in the URL of your Google Spreadsheet, found between '/d/' and '/edit'. Keep this document ID handy.
+1. Open the Google Spreadsheet you want to use with this action and click on the "Share" button.
+2. Add the `client_email` to the sharing settings with read permissions.
+3. The document ID can be found in the URL of your Google Spreadsheet, between '/d/' and '/edit'.
 
 #### Step 3: Setting Up the GitHub Action
 
-1. Setting Up Secrets: It is recommended to store sensitive information like the `client_email` and `private_key` as secrets in your GitHub repository. Navigate to the "Secrets" section of your repository settings and create new secrets corresponding to these values.
-2. Using the Action: Finally, use the action in your workflow as demonstrated in the usage example. Replace the placeholder values for `client_email` and `private_key` with the names of the secrets you created in the previous step.
+1. Navigate to the "Secrets" section of your repository settings and create new secrets for `client_email` and `private_key`.
+2. Use the action in your workflow as demonstrated in the usage example, substituting the placeholder values with the names of the secrets you just created.
 
-### Setup in github action workflow (v2)
+### Setup in GitHub Action Workflow
+
+The YAML configuration for using gsheet.action in your GitHub action workflow would look something like this:
 
 ```yaml
 name: gsheet.action test
@@ -173,11 +180,11 @@ Get cell data (within specified range)
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on contributing to this project.
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/jroehl/gsheet.action/tags).
+We use [SemVer](http://semver.org/) for versioning. You can view available versions under [tags on this repository](https://github.com/jroehl/gsheet.action/tags).
 
 ## License
 
