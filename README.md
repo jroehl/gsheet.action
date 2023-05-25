@@ -131,6 +131,15 @@ Remove an existing worksheet with the specified title
   - worksheetTitle:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
   - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
   
+### renameWorksheet
+
+Rename an existing worksheet to the specified title
+
+- args
+  - worksheetTitle:string - The title of the worksheet (needed if no previous command set the worksheetTitle globally)
+  - newWorksheetTitle:string - The new title of the worksheet
+  - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
+  
 ### updateData
 
 Updates cells with the specified data (at the specified range)

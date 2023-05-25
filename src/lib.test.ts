@@ -1,4 +1,4 @@
-import { validateCommands, asyncForEach } from './lib';
+import { asyncForEach, validateCommands } from './lib';
 
 const cmd = [
   {
@@ -29,7 +29,7 @@ describe('lib', () => {
           JSON.stringify([{ command: 'wrongCommand', args: { foo: 'bar' } }])
         )
       ).toThrowError(
-        'Command "wrongCommand" not found - must be one of: "addSpreadsheet", "getSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "updateData", "appendData", "getData"'
+        'Command "wrongCommand" not found - must be one of: "addSpreadsheet", "getSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "renameWorksheet", "updateData", "appendData", "getData"'
       );
     });
 

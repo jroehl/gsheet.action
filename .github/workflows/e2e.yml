@@ -29,7 +29,8 @@ jobs:
               { "command": "appendData", "args": { "data": [["C2", "C3", "C4"]], "minCol": 2 }},
               { "command": "getData", "args": { "minCol": 1 } },
               { "command": "getData", "args": { "range": "<gsheet.action_e2e-tests_${{ github.sha }}>!A2:B3" } },
-              { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_${{ github.sha }}>" }}
+              { "command": "renameWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_${{ github.sha }}>", "newWorksheetTitle": "<gsheet.action_e2e-tests_new_${{ github.sha }}>" }},
+              { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_new_${{ github.sha }}>" }}
             ]
         env:
           GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
