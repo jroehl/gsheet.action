@@ -1,5 +1,6 @@
 export enum Arg {
   worksheetTitle = 'worksheetTitle',
+  newWorksheetTitle = 'newWorksheetTitle',
   spreadsheetId = 'spreadsheetId',
   spreadsheetTitle = 'spreadsheetTitle',
   valueInputOption = 'valueInputOption',
@@ -23,6 +24,10 @@ const descriptions: { [arg: string]: Description } = {
     type: 'string',
     description:
       'The title of the worksheet (needed if no previous command set the worksheetTitle globally)',
+  },
+  [Arg.newWorksheetTitle]: {
+    type: 'string',
+    description: 'The new title of the worksheet',
   },
   [Arg.spreadsheetId]: {
     type: 'string',
@@ -76,6 +81,7 @@ export enum Func {
   getWorksheet = 'getWorksheet',
   getSpreadsheet = 'getSpreadsheet',
   removeWorksheet = 'removeWorksheet',
+  renameWorksheet = 'renameWorksheet',
   updateData = 'updateData',
   appendData = 'appendData',
   getData = 'getData',
@@ -136,6 +142,14 @@ const config: {
       description: 'Remove an existing worksheet with the specified title',
       args: {
         required: [Arg.worksheetTitle],
+        optional: [Arg.spreadsheetId],
+      },
+    },
+    [Func.renameWorksheet]: {
+      func: Func.renameWorksheet,
+      description: 'Rename an existing worksheet to the specified title',
+      args: {
+        required: [Arg.worksheetTitle, Arg.newWorksheetTitle],
         optional: [Arg.spreadsheetId],
       },
     },

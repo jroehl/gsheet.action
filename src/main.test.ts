@@ -57,7 +57,7 @@ describe('main.ts', () => {
       { command: 'updateData', args: { data: [['1', '2', '3']], minRow: 2 } },
     ]);
     const expectedError =
-      'Command "wrongCommand" not found - must be one of: "addSpreadsheet", "getSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "updateData", "appendData", "getData"';
+      'Command "wrongCommand" not found - must be one of: "addSpreadsheet", "getSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "renameWorksheet", "updateData", "appendData", "getData"';
     const res: Results = await run();
     expect(res?.error?.message).toEqual(expectedError);
     expect(core.debug).not.toHaveBeenCalled();
