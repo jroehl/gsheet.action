@@ -8,7 +8,7 @@ jobs:
   e2e:
     env:
       TARGET_URL: ${{ format('https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
-      STATUS_URL: https://api.github.com/repos/jroehl/gsheet.action/statuses/b53fe06fc9a77f3cc4d729b7f74e14fcd42438e7
+      STATUS_URL: '{{ STATUS_URL }}'
       STATUS_CONTEXT: e2e-preview/github-actions
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +59,7 @@ jobs:
 
           echo "🧪 Running tests"
 
-          assert ".results | length" "-eq" "7"
+          assert ".results | length" "-eq" "8"
 
           echo_test_run 0
           assert ".results[0].result.properties.title" "=" "<gsheet.action_e2e-tests_${{ github.sha }}>"
