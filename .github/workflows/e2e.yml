@@ -59,7 +59,7 @@ jobs:
 
           echo "🧪 Running tests"
 
-          assert ".results | length" "-eq" "7"
+          assert ".results | length" "-eq" "8"
 
           echo_test_run 0
           assert ".results[0].result.properties.title" "=" "<gsheet.action_e2e-tests_${{ github.sha }}>"
