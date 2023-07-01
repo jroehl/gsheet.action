@@ -4,6 +4,9 @@ on:
     branches:
       - 'preview/**'
 
+concurrency:
+  group: ${{ github.workflow }}
+
 jobs:
   e2e:
     env:
@@ -12,6 +15,22 @@ jobs:
       STATUS_CONTEXT: e2e-preview/github-actions
     runs-on: ubuntu-latest
     steps:
+
+      - name: Configure 1Password Service Account
+        uses: 1password/load-secrets-action/configure@v1
+        with:
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: Load Secrets
+        uses: 1password/load-secrets-action@v1
+        with:
+          unset-previous: false
+          export-env: true
+        env:
+          GSHEET_CLIENT_EMAIL: "op://service-account/github.actions/GSHEET_CLIENT_EMAIL"
+          GSHEET_PRIVATE_KEY: "op://service-account/github.actions/GSHEET_PRIVATE_KEY"
+          TEST_SPREADSHEET_ID: "op://service-account/github.actions/TEST_SPREADSHEET_ID"
+
       - name: create pull request status pending
         run: |
           description="E2E tests pending"
@@ -20,7 +39,7 @@ jobs:
       - id: 'run_worksheet_tests'
         uses: './'
         with:
-          spreadsheetId: ${{ secrets.TEST_SPREADSHEET_ID }}
+          spreadsheetId: ${{ env.TEST_SPREADSHEET_ID }}
           commands: | # list of commands, specified as a valid JSON string
             [
               { "command": "addWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_${{ github.sha }}>" }},
@@ -33,8 +52,8 @@ jobs:
               { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_new_${{ github.sha }}>" }}
             ]
         env:
-          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
-          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+          GSHEET_CLIENT_EMAIL: ${{ env.GSHEET_CLIENT_EMAIL }}
+          GSHEET_PRIVATE_KEY: ${{ env.GSHEET_PRIVATE_KEY }}
 
       - name: run tests
         env:

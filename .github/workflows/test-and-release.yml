@@ -12,6 +12,9 @@ permissions:
   issues: write
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -28,13 +31,28 @@ jobs:
 
       - name: 'build'
         run: npm run build
+      
+      - name: Configure 1Password Service Account
+        uses: 1password/load-secrets-action/configure@v1
+        with:
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: Load Secrets
+        uses: 1password/load-secrets-action@v1
+        with:
+          unset-previous: false
+          export-env: true
+        env:
+          GSHEET_CLIENT_EMAIL: "op://service-account/github.actions/GSHEET_CLIENT_EMAIL"
+          GSHEET_PRIVATE_KEY: "op://service-account/github.actions/GSHEET_PRIVATE_KEY"
+          TEST_SPREADSHEET_ID: "op://service-account/github.actions/TEST_SPREADSHEET_ID"
 
       - name: 'test'
         run: npm run test
         env:
-          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
-          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
-          TEST_SPREADSHEET_ID: ${{ secrets.TEST_SPREADSHEET_ID }}
+          GSHEET_CLIENT_EMAIL: ${{ env.GSHEET_CLIENT_EMAIL }}
+          GSHEET_PRIVATE_KEY: ${{ env.GSHEET_PRIVATE_KEY }}
+          TEST_SPREADSHEET_ID: ${{ env.TEST_SPREADSHEET_ID }}
 
       - name: 'check for uncommitted changes'
         # Ensure no changes, but ignore node_modules dir since dev/fresh ci deps installed.
@@ -74,7 +92,7 @@ jobs:
           echo "ACTION=${ACTION_PREVIEW}" >> ${GITHUB_ENV}
           echo "BRANCH=${BRANCH_PREVIEW}" >> ${GITHUB_ENV}
           echo "MERGE_BRANCH=${MERGE_PREVIEW}" >> ${GITHUB_ENV}
-      
+
       - name: set release branch name
         if: ${{ github.event_name == 'push' }}
         run: |
@@ -82,12 +100,25 @@ jobs:
           echo "BRANCH=${BRANCH_RELEASE}" >> ${GITHUB_ENV}
           echo "MERGE_BRANCH=${MERGE_RELEASE}" >> ${GITHUB_ENV}
 
+      - name: Configure 1Password Service Account
+        uses: 1password/load-secrets-action/configure@v1
+        with:
+          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: Load Secrets
+        uses: 1password/load-secrets-action@v1
+        with:
+          unset-previous: false
+          export-env: true
+        env:
+          SSH_PRIVATE_KEY: "op://service-account/github.actions/GSHEET_SSH_PRIVATE_KEY"
+
       - name: setup ssh keys and known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+          ssh-add - <<< "${{ env.SSH_PRIVATE_KEY }}"
 
       - name: setup git
         run: |
