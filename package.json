@@ -35,7 +35,7 @@
     "google-sheet-cli": "^2.2.0",
     "google-spreadsheet": "^3.3.0",
     "husky": "^8.0.3",
-    "semantic-release": "^21.0.5"
+    "semantic-release": "^21.0.7"
   },
   "devDependencies": {
     "@types/jest": "^29.5.2",
