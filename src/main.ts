@@ -46,19 +46,21 @@ export default async function run(): Promise<Results> {
       }
     );
 
+    const jsonData = JSON.stringify({ results });
+
     const { GSHEET_OUTPUT_PATH } = process.env;
     if (GSHEET_OUTPUT_PATH != null) {
-      const jsonData = JSON.stringify({ results })
-      fs.writeFile('google-sheet.json', jsonData, (err) => {
+      fs.writeFile(GSHEET_OUTPUT_PATH, jsonData, (err) => {
         if (err) {
-          console.log(err);
+          setFailed(err);
         } else {
-          console.log('Data written to file');
+          // eslint-disable-next-line i18n-text/no-en
+          debug(`Data written to file ${GSHEET_OUTPUT_PATH}`);
         }
       });
     }
 
-    setOutput('results', JSON.stringify({ results }));
+    setOutput('results', jsonData);
     // eslint-disable-next-line i18n-text/no-en
     debug(`Processed commands\n${JSON.stringify(results, null, 2)}`);
     return { results };
