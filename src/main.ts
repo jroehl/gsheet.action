@@ -1,7 +1,6 @@
 import { debug, getInput, setFailed, setOutput } from '@actions/core';
 import GoogleSheet from 'google-sheet-cli/lib/lib/google-sheet';
 import { ValidatedCommand, asyncForEach, validateCommands } from './lib';
-import fs from 'fs';
 
 export interface Result {
   command: ValidatedCommand;
@@ -45,18 +44,6 @@ export default async function run(): Promise<Results> {
         results.push({ command, result });
       }
     );
-
-    const { GSHEET_OUTPUT_PATH } = process.env;
-    if (GSHEET_OUTPUT_PATH != null) {
-      const jsonData = JSON.stringify({ results })
-      fs.writeFile('google-sheet.json', jsonData, (err) => {
-        if (err) {
-          console.log(err);
-        } else {
-          console.log('Data written to file');
-        }
-      });
-    }
 
     setOutput('results', JSON.stringify({ results }));
     // eslint-disable-next-line i18n-text/no-en
