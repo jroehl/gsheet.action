@@ -17,6 +17,9 @@ inputs:
         { "command": "updateData", "args": { "data": [["A1", "A2", "A3"]] }}
       ]'
     required: true
+  outputFile:
+    description: 'Optional. The path to a file to write the output to. Useful if the output is too large for GitHub Actions.'
+    required: false
 outputs:
   results:
     description: 'The results of all commands as an array'

@@ -89,6 +89,32 @@ jobs:
         run: echo "$RESULTS" | jq
 ```
 
+If you are getting a lot of data from a spreadsheet, the output may be too large. In this case you can write the results to a file:
+
+```yaml
+name: gsheet.action test
+on: push
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - id: 'update_worksheet'
+        uses: jroehl/gsheet.action@v2.0.0 # you can specify '@release' to always have the latest changes
+        with:
+          spreadsheetId: <spreadsheetId>
+          commands: | # list of commands, specified as a valid JSON string
+            [
+              { "command": "getData", "args": { "range": "'<worksheetTitle>'!A:Z" } }
+            ]
+          outputFile: /tmp/gsheet_action_results.json
+        env:
+          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
+          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+      - name: echo results
+        run: echo /tmp/gsheet_action_results.json | jq
+```
+
 > See ./github/workflows/e2e.yml for another example.
 
 ## Supported commands
