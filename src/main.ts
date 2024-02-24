@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import { debug, getInput, setFailed, setOutput } from '@actions/core';
 import GoogleSheet from 'google-sheet-cli/lib/lib/google-sheet';
 import { ValidatedCommand, asyncForEach, validateCommands } from './lib';
@@ -45,7 +46,16 @@ export default async function run(): Promise<Results> {
       }
     );
 
-    setOutput('results', JSON.stringify({ results }));
+    const output = JSON.stringify({ results });
+
+    const outputFile: string = getInput('outputFile', {
+      required: false,
+    });
+    if (outputFile) {
+      fs.writeFileSync(outputFile, output);
+    }
+
+    setOutput('results', output);
     // eslint-disable-next-line i18n-text/no-en
     debug(`Processed commands\n${JSON.stringify(results, null, 2)}`);
     return { results };
