@@ -1,8 +1,0 @@
-{
-  // Lint-only project. tsconfig.json deliberately keeps the tests and bin/ out
-  // of the build, but typescript-eslint needs every linted file to belong to a
-  // project, so this one covers them without changing what tsc emits.
-  "extends": "./tsconfig.json",
-  "include": ["src", "bin"],
-  "exclude": ["node_modules", "dist", "lib"]
-}
