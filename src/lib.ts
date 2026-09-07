@@ -29,6 +29,9 @@ export const asyncForEach = async <T>(
 /**
  * Convert an argument value to the type its descriptor declares
  *
+ * Returning `undefined` means "treat the argument as absent" - the caller then
+ * omits the key entirely instead of passing a value the CLI would misread.
+ *
  * @param {string} arg
  * @param {unknown} value
  * @returns {unknown}
@@ -38,9 +41,14 @@ const coerce = (arg: string, value: unknown): unknown => {
   switch (type) {
     case 'number': {
       if (typeof value === 'number') return value;
-      // Number('') and Number(' ') are 0, which would silently shift a range
-      const parsed =
-        typeof value === 'string' && value.trim() ? Number(value) : NaN;
+      // v2 forwarded these untouched and the CLI's `minRow || 1` /
+      // `maxCol || columnCount` read them as "not set". An expression such as
+      // "${{ steps.x.outputs.n }}" that resolves to nothing has always been a
+      // working input, so it stays one - Number('') would be 0 and silently
+      // shift the range, which is why the value is dropped rather than parsed.
+      if (value === null || (typeof value === 'string' && !value.trim()))
+        return undefined;
+      const parsed = typeof value === 'string' ? Number(value) : NaN;
       if (!Number.isFinite(parsed))
         throw new Error(`Argument "${arg}" must be a number`);
       return parsed;
@@ -49,7 +57,10 @@ const coerce = (arg: string, value: unknown): unknown => {
       if (typeof value === 'boolean') return value;
       if (value === 'true') return true;
       if (value === 'false') return false;
-      throw new Error(`Argument "${arg}" must be true or false`);
+      // Everything else keeps the plain JavaScript truthiness v2 applied. The
+      // only thing #616 needed was for the strings "true" and "false" to mean
+      // what they say instead of both being truthy.
+      return Boolean(value);
     }
     case 'json': {
       if (typeof value === 'object' && value !== null) return value;
@@ -108,17 +119,20 @@ export const validateCommands = (commandString: string): ValidatedCommand[] => {
 
     const coerced: { [arg: string]: unknown } = {};
     for (const arg of [...required, ...optional, ...options]) {
-      if (args[arg] !== undefined) coerced[arg] = coerce(arg, args[arg]);
+      if (args[arg] === undefined) continue;
+      const value = coerce(arg, args[arg]);
+      if (value !== undefined) coerced[arg] = value;
     }
 
     const data = coerced[Arg.data];
+    // `[]` is deliberately allowed: v2 passed it through, `[].every` is
+    // vacuously true, and the CLI turns it into a no-op. A workflow that
+    // appends a dynamically built array must not go red on a quiet day.
     if (
       data !== undefined &&
-      (!Array.isArray(data) || !data.length || !data.every(Array.isArray))
+      (!Array.isArray(data) || !data.every(Array.isArray))
     )
-      throw new Error(
-        `Argument "${Arg.data}" has to be a non-empty array of arrays`
-      );
+      throw new Error(`Argument "${Arg.data}" has to be an array of arrays`);
 
     const collectedOptions = options.reduce(
       (acc, option) =>
