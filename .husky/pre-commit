@@ -2,3 +2,9 @@
 . "$(dirname "$0")/_/husky.sh"
 
 npm run document
+npm run package
+
+if ! git diff --quiet -- README.md dist; then
+  echo "README or dist changed after build; run git add README.md dist and commit again"
+  exit 1
+fi

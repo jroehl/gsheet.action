@@ -10,7 +10,7 @@
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint */**/*.ts --quiet --fix",
     "clean": "rm -rf dist && rm -rf lib",
-    "package": "ncc build --external bin --source-map --license licenses.txt",
+    "package": "npm run build && ncc build --external bin --source-map --license licenses.txt",
     "test": "jest --coverage",
     "all": "npm run clean && npm run build && npm run format && npm run lint && npm run package && npm test",
     "test:watch": "jest --watch --coverage",
