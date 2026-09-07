@@ -28,6 +28,13 @@ Read the line that says which version it would publish. It must be a `3.x` versi
 `1.0.0`. `1.0.0` means the history link is missing or the tag is not an ancestor of the
 commit being released; stop and fix that before letting a real run happen.
 
+The `release` job also refuses on its own: a step before `semantic-release` fails the run
+when `git tag --merged HEAD` is empty. Without it the only thing standing between an
+unlinked history and a published `v1.0.0` is that the tag already exists and `git tag`
+refuses to overwrite it, which is a coincidence rather than a safeguard. The dry run is
+still the check to run, because it tells you which version you are about to get; the
+step in the workflow only stops the worst outcome.
+
 The dry run needs a `GITHUB_TOKEN` (or `GH_TOKEN`) in the environment with read access
 to the repository.
 

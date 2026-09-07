@@ -7,7 +7,7 @@
     [
       "@semantic-release/exec",
       {
-        "publishCmd": "echo \"version=${nextRelease.version}\" >> \"$GITHUB_OUTPUT\""
+        "publishCmd": "if [ -n \"$GITHUB_OUTPUT\" ]; then echo \"version=${nextRelease.version}\" >> \"$GITHUB_OUTPUT\"; fi"
       }
     ]
   ]

@@ -84,9 +84,10 @@ jobs:
   e2e:
     # Forks do not get the repository secrets, so only run this for branches of this
     # repository. workflow_dispatch never reaches it either - it releases nothing.
-    # Dependabot's branch is in this repository but GitHub hands its runs the fork treatment,
-    # so the credentials would resolve empty and every update PR would carry a permanently red
-    # check. Skip it rather than duplicate the secrets into the Dependabot store.
+    # Dependabot's branch is in this repository but GitHub hands its runs the fork
+    # treatment, so the credentials would resolve empty and every grouped monthly PR
+    # would carry a permanently red check. Skip it rather than let that pressure build;
+    # see CONTRIBUTING.md if live coverage on those PRs is ever wanted.
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-latest
     env:
@@ -236,6 +237,22 @@ jobs:
 
       - name: install
         run: npm ci
+
+      # With no tag reachable from HEAD, semantic-release reads this as a repository
+      # that has never released and decides the next version is 1.0.0. Today that
+      # only fails because a v1.0.0 tag already exists - a coincidence standing
+      # between a mistake and the one unrecoverable state here, a published wrong
+      # version. Refuse instead.
+      - name: refuse to release from an unlinked history
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          if [ -z "$(git tag --merged HEAD)" ]; then
+            echo "##[error] no tag is reachable from HEAD, so semantic-release would cut 1.0.0."
+            echo "##[error] Run the one-time history link first: see 'Link the pre-v3 tag history'"
+            echo "##[error] in .claude/skills/release/SKILL.md."
+            exit 1
+          fi
 
       # Writes `version` to the step outputs through the exec plugin in .releaserc.
       # No release to cut means no output, and the alias step below skips itself.
