@@ -8,7 +8,7 @@ A GitHub Action that runs a JSON list of Google Sheets CRUD commands. `src/` is 
 
 ## Commands
 
-- `npm run all` runs clean, build, format, lint, package, test. Run it before committing; CI fails on any diff left after build.
+- `npm run all` runs clean, build, format, lint, package, test. Run it before committing; CI rebuilds the bundle and fails if the committed `dist/` does not match it.
 - `npm test` runs jest. `src/main.test.ts` calls the real Sheets API and needs `GSHEET_CLIENT_EMAIL`, `GSHEET_PRIVATE_KEY` and `TEST_SPREADSHEET_ID` in the env; it skips itself without them, so `src/lib.test.ts` and `src/main.offline.test.ts` are the offline suite. The live path is covered by the `e2e` job, which loads the credentials from 1Password (`op://service-account/github.actions/*`) and does not run for fork PRs.
 - `npm run package` builds `lib/` and bundles `lib/main.js` into `dist/index.js` with ncc. `action.yml` runs that file. `dist/` is committed: it is what users execute, and CI fails if it does not match `src/`.
 - `npm run document` regenerates the README block between `<!-- commands -->` and `<!-- commandsstop -->` from `src/config.ts`. Never edit that block by hand.

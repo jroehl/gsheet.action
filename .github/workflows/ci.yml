@@ -58,12 +58,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure 1Password Service Account
-        uses: 1password/load-secrets-action/configure@581a835fb51b8e7ec56b71cf2ffddd7e68bb25e0 # v2.0.0
+        uses: 1password/load-secrets-action/configure@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
         with:
           service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: Load Secrets
-        uses: 1password/load-secrets-action@581a835fb51b8e7ec56b71cf2ffddd7e68bb25e0 # v2.0.0
+        uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
         with:
           unset-previous: false
           export-env: true
