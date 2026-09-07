@@ -16,10 +16,13 @@ permissions:
   contents: read
 
 # Releases push tags and a branch, so two runs on the same ref must not overlap.
-# Never cancel in progress: a cancelled release run leaves the aliases half moved.
+# A push to master is never cancelled: a cancelled release run leaves the tag pushed
+# and the aliases half moved. A superseded pull-request run is, because every one of
+# them spends a live end-to-end run against the shared spreadsheet and only the newest
+# push to the branch is worth that.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
