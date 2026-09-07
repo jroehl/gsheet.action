@@ -25,8 +25,11 @@ Each push below is a separate action needing the owner's explicit confirmation f
 1. **Squash-merge PR A** (the v3.0.0 hotfix) into `master` on GitHub, with CI green on it.
    *Stops here if* CI is not green, or if `google-sheet-cli` 2.3.0 is not yet released and PR A still needs its version bump.
 
-2. **Rebase `toolchain` (PR B) onto the new `master` and re-verify the bundle.** `toolchain` carries PR A's commits as its own base, so once PR A is squashed into `master` the rebase replays commits whose content is already there; expect conflicts, especially in `dist/`, and resolve them in favour of the rebased tree rather than hand-merging the bundle. Then, on that branch: `npm ci && npm run all`, and `git diff --exit-code dist/` must be clean. Do not merge it; this is only so PR B is known-good and ready for step 11.
-   *Stops here if* `dist/` differs after the rebuild - commit and push the rebuilt bundle onto PR B before going on. Nothing after this depends on PR B, so a red PR B is not a reason to delay the release; it is a reason not to merge it.
+   Expect `master` to go red on this merge and stay red until step 8. The merge is a push to `master`, so it reaches the `release` job, and the guard fails it because no `v3.*` tag is reachable yet. That is the guard doing its job, not a broken build: `test`, `dist-check` and `e2e` are green and only `release` fails. Do not try to fix it - step 8 is the fix.
+
+2. **Rebase `toolchain` (PR B) onto the new `master` and re-verify the bundle.** `toolchain` carries PR A's commits as its own base, so the rebase replays content the squash already put on `master`. Measured, not guessed: it stops **once**, on the `outputFile` commit, conflicting in `README.md` and `src/main.ts`. Three commits drop as empty and 27 of the 30 replay untouched. `dist/` does not conflict - resolve the two files, finish the rebase, then rebuild rather than hand-merging any bundle. Then, on that branch: `npm ci && npm run all`, and `git diff --exit-code dist/` must be clean; commit and push the rebuilt bundle onto PR B if it is not.
+
+   This step gates nothing. Nothing between here and step 10 depends on PR B, so a red or unfinished PR B is not a reason to pause the release - it is only a reason not to merge it at step 11. If the rebase turns out worse than the above, leave it and come back after step 10.
 
 3. **Link the pre-v3 tag history, locally.** No tag from the `v1.x`/`v2.x` line is an ancestor of `master` - the release-branch history and the tag history diverged before this repo moved to tag-based releases. Left alone, `semantic-release` reads `master` as a repository that has never released and cuts `1.0.0`.
 
@@ -57,7 +60,7 @@ Each push below is a separate action needing the owner's explicit confirmation f
 
    `release` is a deprecated but still-documented way to track the latest tag (`@release` in the README). Today it has unrelated history from `master` - its own old force-push lineage - so the plain push the workflow's alias step makes is rejected. This one force fixes that for good; every later release fast-forwards. Alias from the tag, never from `master`.
 
-8. **`git push origin master`** (confirmation). **Last.** This is the first push that can reach the `release` job. The guard passes now because `v3.0.0` is reachable from `HEAD`; `semantic-release` finds it as the baseline with no commits after it and releases nothing, which is the correct outcome. *Stops here if* steps 5 to 7 did not all land - check `git ls-remote` first and finish them, rather than letting the workflow discover the gap.
+8. **`git push origin master`** (confirmation). **Last** of the setup pushes - merging PR B at step 11 is a push to `master` too, and that one is meant to release. This is the first push that can reach the `release` job and pass its guard. The guard passes now because `v3.0.0` is reachable from `HEAD`; `semantic-release` finds it as the baseline with no commits after it and releases nothing, which is the correct outcome. *Stops here if* steps 5 to 7 did not all land - check `git ls-remote` first and finish them, rather than letting the workflow discover the gap.
 
 9. **`gh release create v3.0.0 --generate-notes`** (confirmation). Public and irreversible.
 
@@ -65,10 +68,13 @@ Each push below is a separate action needing the owner's explicit confirmation f
 
     ```sh
     git fetch --tags
+    npm ci
     npx semantic-release --dry-run --no-ci
     ```
 
-    Read the **baseline**, not the next version. At this point `master` is exactly the `v3.0.0` commit, so the correct output is
+    `npm ci` is not optional here. `@semantic-release/exec` is a devDependency of this repository rather than part of semantic-release core, so on a fresh checkout `npx` fetches semantic-release alone, plugin resolution fails, and the run aborts before it ever prints the line you came for.
+
+    Read the **baseline**, not the next version. The run prints a couple of dozen lines; these are the two that matter. At this point `master` is exactly the `v3.0.0` commit, so they should read
 
     ```
     Found git tag v3.0.0 associated with version 3.0.0 on branch master
@@ -83,7 +89,7 @@ Each push below is a separate action needing the owner's explicit confirmation f
 
 If `semantic-release` tagged and published but the alias step failed - a diverged `release` branch, an expired token, a cancelled run - do not release again. Run the CI workflow with `workflow_dispatch` and give it the version that was released (e.g. `3.0.2`). That path skips `test`, `dist-check`, `e2e` and `semantic-release` and runs the alias movement alone. Running it against a version whose aliases are already correct is a clean no-op.
 
-That dispatch is single-purpose: it re-aliases an already released version and nothing else. It cannot be used to re-run CI on `master`. Its `version` input is `required: true`, so there is no way to start it without naming a release, and all three test jobs carry `if: github.event_name != 'workflow_dispatch'` and skip. To re-run the tests, re-run the workflow run itself from the Actions tab, or push a commit.
+That dispatch is single-purpose: it re-aliases an already released version and nothing else. It cannot be used to re-run CI on `master`. Its `version` input is `required: true`, so there is no way to start it without naming a release, and none of the three test jobs run on it: `test` and `dist-check` carry `if: github.event_name != 'workflow_dispatch'`, and `e2e` skips for its own reason - its condition admits only `push` and same-repository `pull_request`. To re-run the tests, re-run the workflow run itself from the Actions tab, or push a commit.
 
 If the alias step failed because `release` has diverged, the plain push will keep failing until someone decides what happened to that branch. Once the divergence is understood, put `release` back on the released commit with one force-push, then re-run the dispatch:
 

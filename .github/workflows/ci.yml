@@ -19,7 +19,10 @@ permissions:
 # A push to master is never cancelled: a cancelled release run leaves the tag pushed
 # and the aliases half moved. A superseded pull-request run is, because every one of
 # them spends a live end-to-end run against the shared spreadsheet and only the newest
-# push to the branch is worth that.
+# push to the branch is worth that. The cost of cancelling: the e2e job creates and
+# removes its worksheet inside one step with no always-run cleanup, so a run killed
+# mid-step leaves an orphan behind. They are named gsheet.action_e2e_<epoch>_<sha>, and
+# reclaiming them is the CLI's cleanup cron rather than anything in this workflow.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

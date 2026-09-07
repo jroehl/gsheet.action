@@ -20,12 +20,19 @@ and pushed, and before any push to `master` is allowed to run a real release:
 
 ```sh
 git fetch --tags
+npm ci
 npx semantic-release --dry-run --no-ci
 ```
 
+`npm ci` is required, not tidiness. `@semantic-release/exec` is a devDependency of this
+repository rather than part of semantic-release core, so on a fresh checkout `npx` pulls
+semantic-release on its own, plugin resolution fails and the run aborts before printing
+any of the lines below.
+
 Read the baseline line first - the one that starts `Found git tag`. It must name
-`v3.0.0`. Run immediately after the manual release, when `master` is exactly the tagged
-commit, the whole output is
+`v3.0.0`. The run prints a couple of dozen lines; only two of them matter. Run
+immediately after the manual release, when `master` is exactly the tagged commit, they
+read
 
 ```
 Found git tag v3.0.0 associated with version 3.0.0 on branch master

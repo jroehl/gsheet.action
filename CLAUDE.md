@@ -35,6 +35,6 @@ Revival in progress. `action.yml` declares `node24`, arguments are coerced to th
 2. Squash-merge PR A (the v3.0.0 hotfix) into `master`.
 3. Rebase this toolchain branch (PR B) onto the new `master` and re-verify the bundle. Do not merge it yet.
 4. Owner runs the `release` skill for `3.0.0`, in its documented order: link the history locally, tag `v3.0.0` and move `v3` locally, then push `v3.0.0`, `v3` and the `release` alias, and only then `git push origin master`. Pushing `master` before `v3.0.0` exists is the one ordering mistake that publishes a wrong version permanently.
-5. Owner creates the GitHub release, then runs `npx semantic-release --dry-run --no-ci` on `master` and confirms it says `3.x`, never `1.0.0` and never `2.x`. Until that passes, the `release` job must not run for real (`test-docs/revive-v3.md`).
+5. Owner creates the GitHub release, then runs `npm ci && npx semantic-release --dry-run --no-ci` on `master`. The gate is the baseline line, not the next version: it must read `Found git tag v3.0.0 associated with version 3.0.0 on branch master`. Releasing nothing is the pass - `master` is the tagged commit, so there is nothing after the tag to release. `No git tag version found` (then `1.0.0`) or `Found git tag v2.1.1` (then a `2.x`) is the failure. Until it passes, the `release` job must not run for real (`test-docs/revive-v3.md`).
 6. Merge PR B. Not before step 5: it is a push to `master`, so `v3.0.0` has to be reachable from `master` first.
 7. Close issues #611, #612, #616, #617 and PR #615.
