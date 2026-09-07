@@ -1,55 +1,108 @@
-name: 'E2E tests (preview) version'
+name: CI
+
 on:
+  pull_request:
   push:
     branches:
-      - 'preview/**'
+      - master
 
-concurrency:
-  group: ${{ github.workflow }}
+permissions:
+  contents: read
 
 jobs:
-  e2e:
-    env:
-      TARGET_URL: ${{ format('https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
-      STATUS_URL: '{{ STATUS_URL }}'
-      STATUS_CONTEXT: e2e-preview/github-actions
+  test:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: install
+        run: npm ci
+
+      - name: build
+        run: npm run build
+
+      # No credentials: the live suite in src/main.test.ts skips itself, the e2e job covers it.
+      - name: test
+        run: npm test
+
+  dist-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: install
+        run: npm ci
+
+      - name: package
+        run: npm run package
+
+      - name: verify dist is up to date
+        run: |
+          git diff --ignore-space-at-eol --exit-code dist/ \
+            || (echo "##[error] dist/ does not match the sources. Run 'npm run package' and commit dist/" \
+                && exit 1)
+
+  e2e:
+    # Forks do not get the 1Password secrets, so only run this for branches of this repository.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
       - name: Configure 1Password Service Account
-        uses: 1password/load-secrets-action/configure@v1
+        uses: 1password/load-secrets-action/configure@581a835fb51b8e7ec56b71cf2ffddd7e68bb25e0 # v2.0.0
         with:
           service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
       - name: Load Secrets
-        uses: 1password/load-secrets-action@v1
+        uses: 1password/load-secrets-action@581a835fb51b8e7ec56b71cf2ffddd7e68bb25e0 # v2.0.0
         with:
           unset-previous: false
           export-env: true
         env:
-          GSHEET_CLIENT_EMAIL: "op://service-account/github.actions/GSHEET_CLIENT_EMAIL"
-          GSHEET_PRIVATE_KEY: "op://service-account/github.actions/GSHEET_PRIVATE_KEY"
-          TEST_SPREADSHEET_ID: "op://service-account/github.actions/TEST_SPREADSHEET_ID"
+          GSHEET_CLIENT_EMAIL: 'op://service-account/github.actions/GSHEET_CLIENT_EMAIL'
+          GSHEET_PRIVATE_KEY: 'op://service-account/github.actions/GSHEET_PRIVATE_KEY'
+          TEST_SPREADSHEET_ID: 'op://service-account/github.actions/TEST_SPREADSHEET_ID'
 
-      - name: create pull request status pending
+      # A pull request from a fork never reaches this job, but a misconfigured vault would
+      # silently turn the push run into a no-op, so fail loudly on master instead.
+      - name: assert secrets are present
+        if: github.event_name == 'push'
         run: |
-          description="E2E tests pending"
-          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"pending\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
-      - uses: actions/checkout@v3
+          test -n "${GSHEET_CLIENT_EMAIL}" || (echo "##[error] GSHEET_CLIENT_EMAIL is empty" && exit 1)
+          test -n "${GSHEET_PRIVATE_KEY}" || (echo "##[error] GSHEET_PRIVATE_KEY is empty" && exit 1)
+          test -n "${TEST_SPREADSHEET_ID}" || (echo "##[error] TEST_SPREADSHEET_ID is empty" && exit 1)
+
+      - name: name the worksheets after this run
+        run: |
+          title="gsheet.action_e2e_$(date +%s)_${{ github.sha }}"
+          echo "WORKSHEET_TITLE=${title}" >> "${GITHUB_ENV}"
+          echo "WORKSHEET_TITLE_NEW=${title}_new" >> "${GITHUB_ENV}"
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
       - id: 'run_worksheet_tests'
         uses: './'
         with:
           spreadsheetId: ${{ env.TEST_SPREADSHEET_ID }}
           commands: | # list of commands, specified as a valid JSON string
             [
-              { "command": "addWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_${{ github.sha }}>" }},
+              { "command": "addWorksheet", "args": { "worksheetTitle": "${{ env.WORKSHEET_TITLE }}" }},
               { "command": "updateData", "args": { "data": [["A1", "A2", "A3"]] }},
               { "command": "appendData", "args": { "data": [["B1", "B2", "B3"]], "minCol": 1 }},
               { "command": "appendData", "args": { "data": [["C2", "C3", "C4"]], "minCol": 2 }},
               { "command": "getData", "args": { "minCol": 1 } },
-              { "command": "getData", "args": { "range": "<gsheet.action_e2e-tests_${{ github.sha }}>!A2:B3" } },
-              { "command": "renameWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_${{ github.sha }}>", "newWorksheetTitle": "<gsheet.action_e2e-tests_new_${{ github.sha }}>" }},
-              { "command": "removeWorksheet", "args": { "worksheetTitle": "<gsheet.action_e2e-tests_new_${{ github.sha }}>" }}
+              { "command": "getData", "args": { "range": "${{ env.WORKSHEET_TITLE }}!A2:B3" } },
+              { "command": "renameWorksheet", "args": { "worksheetTitle": "${{ env.WORKSHEET_TITLE }}", "newWorksheetTitle": "${{ env.WORKSHEET_TITLE_NEW }}" }},
+              { "command": "removeWorksheet", "args": { "worksheetTitle": "${{ env.WORKSHEET_TITLE_NEW }}" }}
             ]
         env:
           GSHEET_CLIENT_EMAIL: ${{ env.GSHEET_CLIENT_EMAIL }}
@@ -81,7 +134,7 @@ jobs:
           assert ".results | length" "-eq" "8"
 
           echo_test_run 0
-          assert ".results[0].result.properties.title" "=" "<gsheet.action_e2e-tests_${{ github.sha }}>"
+          assert ".results[0].result.properties.title" "=" "${WORKSHEET_TITLE}"
 
           echo_test_run 1
           assert ".results[1].command.kwargs[0][0][0]" "=" "A1"
@@ -122,15 +175,3 @@ jobs:
           assert ".results[5].result.rawData[1][1]" "=" "C2"
 
           echo "🎉 Tests successful"
-
-      - name: create pull request status failure
-        if: failure()
-        run: |
-          description="E2E tests failed"
-          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"failure\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
-
-      - name: create pull request status success
-        if: success()
-        run: |
-          description="E2E tests succeeded"
-          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -X POST -d "{\"state\": \"success\", \"description\": \"${description}\", \"context\": \"${STATUS_CONTEXT}\", \"target_url\": \"${TARGET_URL}\"}" ${STATUS_URL}
