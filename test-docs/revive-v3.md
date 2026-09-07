@@ -23,11 +23,22 @@ git fetch --tags
 npx semantic-release --dry-run --no-ci
 ```
 
-Read the line that says which version it would publish. It must be a `3.x` version -
-`3.0.1` or `3.1.0` depending on the commits since the tag - and it must never be `1.0.0`
-or a `2.x`. `1.0.0` means the history link is missing. A `2.x` means the link is there
-but `v3.0.0` is not reachable from the commit being released, so the v2 line is being
-read as the baseline. Stop and fix either before letting a real run happen.
+Read the baseline line first - the one that starts `Found git tag`. It must name
+`v3.0.0`. Run immediately after the manual release, when `master` is exactly the tagged
+commit, the whole output is
+
+```
+Found git tag v3.0.0 associated with version 3.0.0 on branch master
+There are no relevant changes, so no new version is released.
+```
+
+and that is the pass: there is nothing after the tag to release yet. Once there are
+commits after it the next version must be a `3.x` - `3.0.1` or `3.1.0` depending on the
+commits - and never `1.0.0` or a `2.x`. `No git tag version found on branch master`
+followed by `1.0.0` means the history link is missing. `Found git tag v2.1.1` followed by
+a `2.x` means the link is there but `v3.0.0` is not reachable from the commit being
+released, so the v2 line is being read as the baseline. Stop and fix either before
+letting a real run happen.
 
 There is a second, narrower version of the same trap, and it is why the `/release` skill
 pushes `master` last. Right after the `ours` merge and before `v3.0.0` is pushed, every

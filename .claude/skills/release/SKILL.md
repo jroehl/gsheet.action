@@ -25,8 +25,8 @@ Each push below is a separate action needing the owner's explicit confirmation f
 1. **Squash-merge PR A** (the v3.0.0 hotfix) into `master` on GitHub, with CI green on it.
    *Stops here if* CI is not green, or if `google-sheet-cli` 2.3.0 is not yet released and PR A still needs its version bump.
 
-2. **Rebase `toolchain` (PR B) onto the new `master` and re-verify the bundle.** On that branch: `npm ci && npm run all`, then `git diff --exit-code dist/`. Do not merge it; this is only so PR B is known-good and ready for step 11.
-   *Stops here if* `dist/` differs - fix and push the rebuilt bundle onto PR B before going on. Nothing after this depends on PR B, so a red PR B is not a reason to delay the release; it is a reason not to merge it.
+2. **Rebase `toolchain` (PR B) onto the new `master` and re-verify the bundle.** `toolchain` carries PR A's commits as its own base, so once PR A is squashed into `master` the rebase replays commits whose content is already there; expect conflicts, especially in `dist/`, and resolve them in favour of the rebased tree rather than hand-merging the bundle. Then, on that branch: `npm ci && npm run all`, and `git diff --exit-code dist/` must be clean. Do not merge it; this is only so PR B is known-good and ready for step 11.
+   *Stops here if* `dist/` differs after the rebuild - commit and push the rebuilt bundle onto PR B before going on. Nothing after this depends on PR B, so a red PR B is not a reason to delay the release; it is a reason not to merge it.
 
 3. **Link the pre-v3 tag history, locally.** No tag from the `v1.x`/`v2.x` line is an ancestor of `master` - the release-branch history and the tag history diverged before this repo moved to tag-based releases. Left alone, `semantic-release` reads `master` as a repository that has never released and cuts `1.0.0`.
 
@@ -68,7 +68,14 @@ Each push below is a separate action needing the owner's explicit confirmation f
     npx semantic-release --dry-run --no-ci
     ```
 
-    It must say it would publish a `3.x` version. `1.0.0` means step 3 did not take. `2.x` means `v3.0.0` is not reachable from the checked-out `master`, so step 5 or step 8 did not land. *Stops here* on either: no further push to `master` until it reads `3.x`. `test-docs/revive-v3.md` records this gate too.
+    Read the **baseline**, not the next version. At this point `master` is exactly the `v3.0.0` commit, so the correct output is
+
+    ```
+    Found git tag v3.0.0 associated with version 3.0.0 on branch master
+    There are no relevant changes, so no new version is released.
+    ```
+
+    Releasing nothing is the pass: there is nothing after the tag to release. The two failures are `No git tag version found on branch master` followed by a `1.0.0` - step 3 did not take - and `Found git tag v2.1.1 associated with version 2.1.1` followed by a `2.x` - the link is there but `v3.0.0` is not reachable, so step 5 or step 8 did not land. *Stops here* on either: no further push to `master` until the baseline reads `3.0.0`. Once PR B is merged the same command on `master` names `3.0.0` as the last release and a `3.x` as the next one. `test-docs/revive-v3.md` records this gate too.
 
 11. **Merge PR B.** Only now. Its push to `master` is the first real automated release.
 
