@@ -101,6 +101,8 @@ jobs:
               { "command": "appendData", "args": { "data": [["C2", "C3", "C4"]], "minCol": 2 }},
               { "command": "getData", "args": { "minCol": 1 } },
               { "command": "getData", "args": { "range": "${{ env.WORKSHEET_TITLE }}!A2:B3" } },
+              { "command": "updateData", "args": { "data": [[1]], "minRow": 10, "minCol": 1 }},
+              { "command": "getData", "args": { "minRow": 10, "minCol": 1 } },
               { "command": "renameWorksheet", "args": { "worksheetTitle": "${{ env.WORKSHEET_TITLE }}", "newWorksheetTitle": "${{ env.WORKSHEET_TITLE_NEW }}" }},
               { "command": "removeWorksheet", "args": { "worksheetTitle": "${{ env.WORKSHEET_TITLE_NEW }}" }}
             ]
@@ -121,7 +123,10 @@ jobs:
             local msg="assert ${filter} ${comp} ${expected}"
             local success=${4:-"✅ ${msg}"}
             local failure=${5:-"❌ ${msg} - (\"${result}\")"}
-            test ${result} ${comp} ${expected} && (printf "    %s\n" "${success}") || (printf "    %s\n" "${failure}" && exit 1)
+            # Quoting matters: every assertion below that expects "" collapses to a
+            # one-argument `test` without it, and a one-argument `test` on a non-empty
+            # word is always true, so the assertion passes whatever the sheet says.
+            test "${result}" "${comp}" "${expected}" && (printf "    %s\n" "${success}") || (printf "    %s\n" "${failure}" && exit 1)
           }
 
           function echo_test_run() {
@@ -131,7 +136,7 @@ jobs:
 
           echo "🧪 Running tests"
 
-          assert ".results | length" "-eq" "8"
+          assert ".results | length" "-eq" "10"
 
           echo_test_run 0
           assert ".results[0].result.properties.title" "=" "${WORKSHEET_TITLE}"
@@ -173,5 +178,13 @@ jobs:
           assert ".results[5].result.rawData[0][1]" "=" "B2"
           assert ".results[5].result.rawData[1][0]" "=" ""
           assert ".results[5].result.rawData[1][1]" "=" "C2"
+
+          # #616: a single-value nested array. v2's parser stringified [[1]] to "1",
+          # re-parsed it to the number 1 and rejected it as "not nested".
+          echo_test_run 6
+          assert ".results[6].command.kwargs[0][0][0]" "-eq" "1"
+
+          echo_test_run 7
+          assert ".results[7].result.rawData[0][0]" "=" "1"
 
           echo "🎉 Tests successful"
