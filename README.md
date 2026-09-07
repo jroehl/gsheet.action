@@ -10,6 +10,7 @@ gsheet.action is a GitHub action designed to facilitate Create, Read, Update, an
       - [Step 2: Sharing the Spreadsheet](#step-2-sharing-the-spreadsheet)
       - [Step 3: Setting Up the GitHub Action](#step-3-setting-up-the-github-action)
     - [Setup in GitHub Action Workflow](#setup-in-github-action-workflow)
+  - [Migrating from v2](#migrating-from-v2)
   - [Supported commands](#supported-commands)
     - [addSpreadsheet](#addspreadsheet)
     - [getSpreadsheet](#getspreadsheet)
@@ -70,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: 'update_worksheet'
-        uses: jroehl/gsheet.action@v2.0.0 # you can specify '@release' to always have the latest changes
+        uses: jroehl/gsheet.action@v3
         with:
           spreadsheetId: <spreadsheetId>
           commands: | # list of commands, specified as a valid JSON string
@@ -100,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: 'update_worksheet'
-        uses: jroehl/gsheet.action@v2.0.0 # you can specify '@release' to always have the latest changes
+        uses: jroehl/gsheet.action@v3
         with:
           spreadsheetId: <spreadsheetId>
           commands: | # list of commands, specified as a valid JSON string
@@ -118,6 +119,17 @@ jobs:
 The file always receives the full JSON. Once the results pass 1,000,000 bytes the `results` output becomes `{"outputFile": "<path>", "truncated": true}` and a notice is logged, so a large read never fails the step - the file holds everything. Without `outputFile` the output keeps carrying the full JSON and a warning suggests setting the input, since there would be nowhere else to read the results from.
 
 > See ./github/workflows/e2e.yml for another example.
+
+## Migrating from v2
+
+The only change is the version reference. Command syntax, inputs and outputs are unchanged:
+
+```diff
+-      uses: jroehl/gsheet.action@v2.1.1
++      uses: jroehl/gsheet.action@v3
+```
+
+`@release` still works but is deprecated in favor of `@v3`; move off it when convenient.
 
 ## Supported commands
 <!-- commands -->

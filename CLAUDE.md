@@ -21,12 +21,14 @@ A GitHub Action that runs a JSON list of Google Sheets CRUD commands. `src/` is 
 
 ## Release
 
-The `release` and `preview/*` force-push machinery is gone: `.github/workflows/ci.yml` only tests, checks `dist/` and runs the e2e. Releasing is tag-based (`dist/` is already in the tree, tag `vX.Y.Z`, move the major tag); the semantic-release job that automates it is not wired up yet.
+The `release` and `preview/*` force-push machinery is gone: `.github/workflows/ci.yml` only tests, checks `dist/` and runs the e2e. Releasing is tag-based and manual; the procedure lives in `.claude/skills/release/SKILL.md`.
+
+No `v1.x`/`v2.x` tag is an ancestor of `master` - the release-branch history and the tag history diverged before this repo moved to tag-based releases. The first `v3` release needs a one-time `git merge -s ours --allow-unrelated-histories v2.1.1` on `master` to link them, or `semantic-release` would read `master` as having no prior release and cut `1.0.0`. The `release` branch (the deprecated `@release` alias) similarly has unrelated history and needs one force-push to become an ancestor of `master`; every later update is a plain fast-forward. All git pushes are the repository owner's action, each needing confirmation for that specific push - the skill documents the steps but never runs them.
 
 ## Status (2026-09-07)
 
-Revival in progress. `action.yml` declares `node24`, arguments are coerced to the type their descriptor declares, `outputFile` keeps an oversized result from failing the step, and `dist/` is committed. Remaining sequence:
+Revival in progress. `action.yml` declares `node24`, arguments are coerced to the type their descriptor declares, `outputFile` keeps an oversized result from failing the step, and `dist/` is committed. The release skill, README and this file describe the `v3.0.0` procedure; the tag itself, the history-linking merge and all pushes are still to be done by the repository owner. Remaining sequence:
 
 1. Release `google-sheet-cli` 2.3.0 (fix release off its master).
-2. Modernize both repos' toolchains and this repo's CI, then tag `v3.0.0` here.
+2. Owner runs the `release` skill for `3.0.0`: link history, tag `v3.0.0`, move `v3`, alias `release`.
 3. Close issues #611, #612, #616, #617 and PR #615.
