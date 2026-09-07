@@ -8,7 +8,7 @@
     "document": "tsc bin/* --outDir lib && node ./lib/bin/documentation.js",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
-    "lint": "eslint */**/*.ts --quiet --fix",
+    "lint": "eslint src bin --ext .ts --quiet --fix",
     "clean": "rm -rf dist && rm -rf lib",
     "package": "npm run build && ncc build --external bin --source-map --license licenses.txt",
     "test": "jest --coverage",

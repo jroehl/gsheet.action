@@ -93,7 +93,7 @@ describeLive('main.ts', () => {
     expect(core.debug).toHaveBeenCalled();
     expect(core.setOutput).toHaveBeenCalledWith(
       'results',
-      `{\"results\":[{\"command\":{\"func\":\"removeWorksheet\",\"kwargs\":[\"${worksheetTitle}\",null]}}]}`
+      `{"results":[{"command":{"func":"removeWorksheet","kwargs":["${worksheetTitle}",null]}}]}`
     );
   });
 
