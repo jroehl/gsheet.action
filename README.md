@@ -118,11 +118,11 @@ jobs:
 
 The file always receives the full JSON. Once the results pass 1,000,000 bytes the `results` output becomes `{"outputFile": "<path>", "truncated": true}` and a notice is logged, so a large read never fails the step - the file holds everything. Without `outputFile` the output keeps carrying the full JSON and a warning suggests setting the input, since there would be nowhere else to read the results from.
 
-> See ./github/workflows/e2e.yml for another example.
+> See ./.github/workflows/ci.yml for another example.
 
 ## Migrating from v2
 
-The only change is the version reference. Command syntax, inputs and outputs are unchanged:
+The only change you have to make is the version reference:
 
 ```diff
 -      uses: jroehl/gsheet.action@v2.1.1
@@ -132,6 +132,15 @@ The only change is the version reference. Command syntax, inputs and outputs are
 (Shown from `@v2.1.1`, the last v2 release; the same one-line change applies whichever v2.x you're currently pinned to, including the older `@v2.0.0` used in earlier versions of this README.)
 
 `@release` still works but is deprecated in favor of `@v3`; move off it when convenient.
+
+Command syntax, inputs and outputs are otherwise compatible. These are the differences you may notice:
+
+- **The runtime.** The action runs on `node24` instead of the removed `node16`. That is the reason for the release.
+- **`hasHeaderRow: "false"` now means false.** v2 read the string `"false"` as truthy and stripped the first row; v3 reads it as the boolean it looks like. **This is the only change that alters results without saying so**: on a `getData` whose `hasHeaderRow` is the string `"false"`, `header` is now `["(A)", "(B)", ...]` rather than your first row, and `formatted` and `rawData` include that row. Pass `true` or `"true"` if you were relying on the old reading. Anything that is not the string `"true"` or `"false"` - `1`, `0`, `"yes"` - is still read by plain truthiness, as it was on v2.
+- **`data: [[1]]` works.** Single-value nested arrays, and nested arrays holding numbers or booleans, used to be rejected as "not nested" (#616). They now write.
+- **New optional `outputFile` input.** Writes the full results JSON to a path of your choosing. Existing workflows are unaffected; see the example above.
+- **A different error message for malformed `data`.** The text changed; the input shapes that fail did not. `data: []` is still accepted and still issues an empty write.
+- **A `punycode` deprecation warning on stderr.** `[DEP0040] DeprecationWarning: The punycode module is deprecated` comes from a transitive dependency on Node 21 and above. It is noise, not a failure, and disappears when that dependency is updated.
 
 ## Supported commands
 <!-- commands -->
