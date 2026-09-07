@@ -36,7 +36,9 @@ After `npm install <pkg>`, check what it did to the lockfile: `git diff --numsta
 Dependabot
 ----------
 
-Dependabot opens one grouped PR a month for minor and patch updates, plus a separate PR per major. `@actions/core` and `google-sheet-cli` are ignored: both are bundled into the committed `dist/`, which Dependabot cannot rebuild, so its PRs would always fail `dist-check`. Bump those two by hand and commit the rebuilt bundle with the version change.
+Dependabot opens one grouped PR a month for minor and patch updates, plus a separate PR per major. `@actions/core` and `google-sheet-cli` are ignored: both are bundled into the committed `dist/`, which Dependabot cannot rebuild, so its PRs would always fail `dist-check`. Bump those two by hand and commit the rebuilt bundle with the version change. Note that an `ignore` entry silences Dependabot's security PRs for a package as well as its version updates, so those two are not covered by automatic security updates - watch the Dependabot alerts tab for them.
+
+The ignore list only covers the dependencies that are *always* in the bundle. A `@vercel/ncc` or `typescript` bump changes the bundle's own output - a different bundler or a different emit - so the grouped monthly PR fails `dist-check` for exactly the same structural reason, just not every month. That PR is not broken: check out its branch, run `npm run package`, and commit and push the rebuilt `dist/` onto it.
 
 The `e2e` job does not run on Dependabot's pull requests. Its branch is in this repository, but GitHub runs Dependabot-triggered workflows with fork-level access, so `secrets.OP_SERVICE_ACCOUNT_TOKEN` would resolve empty and every one of those PRs would carry a red check nobody can fix. If live coverage on them is ever wanted, store the same token as a **Dependabot** secret (repository settings, Secrets and variables, Dependabot) and drop the `github.actor != 'dependabot[bot]'` clause from the `e2e` condition in `.github/workflows/ci.yml`.
 
