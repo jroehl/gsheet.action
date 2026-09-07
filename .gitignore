@@ -100,3 +100,5 @@ lib/**/*
 .github/workflows/local-test.yml
 
 dist
+# Claude Code worktrees
+.claude/worktrees/
