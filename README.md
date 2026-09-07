@@ -112,8 +112,10 @@ jobs:
           GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
           GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
       - name: echo results
-        run: echo /tmp/gsheet_action_results.json | jq
+        run: cat /tmp/gsheet_action_results.json | jq
 ```
+
+The file always receives the full JSON. Once the results pass 1,000,000 bytes the `results` output becomes `{"outputFile": "<path>", "truncated": true}` and a notice is logged, so a large read never fails the step - the file holds everything. Without `outputFile` the output keeps carrying the full JSON and a warning suggests setting the input, since there would be nowhere else to read the results from.
 
 > See ./github/workflows/e2e.yml for another example.
 
