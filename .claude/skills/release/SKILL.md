@@ -30,12 +30,12 @@ No tag from the `v1.x`/`v2.x` line is an ancestor of `master` - the release-bran
 `release` is a deprecated but still-documented way to track the latest tag (`@release` in the README). Today it has unrelated history from `master` - its own old force-push lineage - so the plain push the workflow's alias step makes is rejected. One force-push fixes that for good; every later release fast-forwards.
 
 1. `git fetch origin release` then `git merge-base --is-ancestor origin/release HEAD`.
-2. Exit code `1` (not an ancestor): `git push -f origin master:release`. It force-overwrites a public branch, so confirm this specific push.
+2. Exit code `1` (not an ancestor): `git push -f origin master:release`. It force-overwrites a public branch, so confirm this specific push. `master` is the right source only here, before the first release, when nothing is tagged yet; afterwards always alias from the tag (see "Re-running the aliases on their own").
 3. Exit code `0`: nothing to do, the workflow handles it from here.
 
 ### 3. Cut `v3.0.0` by hand, then prove semantic-release agrees
 
-`semantic-release` cannot be trusted to pick the version until a `v3` tag is reachable from `master`. Cut the first one manually with the fallback below, then, on a fresh checkout of `master` with a `GITHUB_TOKEN` in the env:
+`semantic-release` cannot be trusted to pick the version until a tag is reachable from `master`. The `release` job knows this: a step before `semantic-release` fails the run when `git tag --merged HEAD` is empty, so a push to `master` before step 1 is done goes red rather than publishing `1.0.0`. That step only stops the worst outcome - it does not tell you which version you would get. So cut the first release manually with the fallback below, then, on a fresh checkout of `master` with a `GITHUB_TOKEN` in the env:
 
 ```sh
 git fetch --tags
@@ -48,7 +48,13 @@ It must say it would publish a `3.x` version. If it says `1.0.0`, step 1 did not
 
 If `semantic-release` tagged and published but the alias step failed - a diverged `release` branch, an expired token, a cancelled run - do not release again. Run the CI workflow with `workflow_dispatch` and give it the version that was released (e.g. `3.0.2`). That path skips `test`, `dist-check`, `e2e` and `semantic-release` and runs the alias movement alone. Running it against a version whose aliases are already correct is a clean no-op.
 
-If the alias step failed because `release` has diverged, the plain push will keep failing until someone decides what happened to that branch. Redo step 2 above once the divergence is understood.
+If the alias step failed because `release` has diverged, the plain push will keep failing until someone decides what happened to that branch. Once the divergence is understood, put `release` back on the released commit with one force-push, then re-run the dispatch:
+
+```sh
+git push -f origin "v$ARGUMENTS^{}:refs/heads/release"
+```
+
+Owner confirmation, like any force-push. Use the tag, not `master`: by the time you are recovering, `master` may be several commits past the release, and `git push -f origin master:release` would alias `@release` to code that was never released. The `^{}` resolves the tag to its commit whichever way the tag was made.
 
 ## Manual fallback: tag by hand
 

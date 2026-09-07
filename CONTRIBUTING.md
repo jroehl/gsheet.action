@@ -28,6 +28,18 @@ Run `npm run all`. It cleans, builds, formats, lints, rebuilds the bundle and ru
 
 `README.md`'s command reference is generated from `src/config.ts` by `npm run document`. Never edit the block between `<!-- commands -->` and `<!-- commandsstop -->` by hand.
 
+Adding a dependency
+-------------------
+
+After `npm install <pkg>`, check what it did to the lockfile: `git diff --numstat package-lock.json`. The third column is the file name and the second is removed lines - it should be `0`. npm sometimes drops optional peer entries it decides this machine does not need, which leaves the lockfile internally inconsistent. Nothing complains locally; it surfaces as `npm ci` failing in CI with "Missing: … from lock file", long after the mistake. If there are removals, restore the lockfile, re-add the dependency, and keep only the additions.
+
+Dependabot
+----------
+
+Dependabot opens one grouped PR a month for minor and patch updates, plus a separate PR per major. `@actions/core` and `google-sheet-cli` are ignored: both are bundled into the committed `dist/`, which Dependabot cannot rebuild, so its PRs would always fail `dist-check`. Bump those two by hand and commit the rebuilt bundle with the version change.
+
+The `e2e` job does not run on Dependabot's pull requests. Its branch is in this repository, but GitHub runs Dependabot-triggered workflows with fork-level access, so `secrets.OP_SERVICE_ACCOUNT_TOKEN` would resolve empty and every one of those PRs would carry a red check nobody can fix. If live coverage on them is ever wanted, store the same token as a **Dependabot** secret (repository settings, Secrets and variables, Dependabot) and drop the `github.actor != 'dependabot[bot]'` clause from the `e2e` condition in `.github/workflows/ci.yml`.
+
 Commit messages
 ---------------
 
