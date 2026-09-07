@@ -9,6 +9,7 @@
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src bin --quiet --fix",
+    "lint:check": "eslint src bin --quiet",
     "clean": "rm -rf dist && rm -rf lib",
     "package": "npm run build && ncc build --external bin --source-map --license licenses.txt",
     "test": "jest --coverage",
@@ -37,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@semantic-release/exec": "^7.1.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.13.3",
     "@vercel/ncc": "^0.45.0",

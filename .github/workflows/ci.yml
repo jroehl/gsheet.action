@@ -5,12 +5,26 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Released version to re-alias, without the v (e.g. 3.0.2). Moves vN and the release branch onto that tag; does not release.'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+# Releases push tags and a branch, so two runs on the same ref must not overlap.
+# Never cancel in progress: a cancelled release run leaves the aliases half moved.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   test:
+    # workflow_dispatch only re-aliases an already released version, so nothing to test.
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -26,11 +40,20 @@ jobs:
       - name: build
         run: npm run build
 
+      # The release procedure runs `npm run all`, which lints and formats. Both are
+      # checked here so a release never stops at a failure CI could have caught.
+      - name: format
+        run: npm run format-check
+
+      - name: lint
+        run: npm run lint:check
+
       # No credentials: the live suite in src/main.test.ts skips itself, the e2e job covers it.
       - name: test
         run: npm test
 
   dist-check:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -59,11 +82,12 @@ jobs:
                 && exit 1)
 
   e2e:
-    # Forks do not get the repository secrets, so only run this for branches of this repository.
-    # Dependabot's branch is in this repository but GitHub hands its runs the fork treatment, so
-    # the credentials would resolve empty and every update PR would carry a permanently red
+    # Forks do not get the repository secrets, so only run this for branches of this
+    # repository. workflow_dispatch never reaches it either - it releases nothing.
+    # Dependabot's branch is in this repository but GitHub hands its runs the fork treatment,
+    # so the credentials would resolve empty and every update PR would carry a permanently red
     # check. Skip it rather than duplicate the secrets into the Dependabot store.
-    if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-latest
     env:
       GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
@@ -186,3 +210,77 @@ jobs:
           assert ".results[7].result.rawData[0][0]" "=" "1"
 
           echo "🎉 Tests successful"
+
+  release:
+    needs: [test, dist-check, e2e]
+    # always(), because on workflow_dispatch all three needs are skipped and a skipped
+    # need would otherwise skip this job too. The push arm then has to name every
+    # result explicitly - that is what keeps a red or skipped e2e from releasing.
+    if: always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.test.result == 'success' && needs.dist-check.result == 'success' && needs.e2e.result == 'success'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      # fetch-depth 0 for the whole history semantic-release reads, and for the tags
+      # the alias step resolves on a workflow_dispatch rerun.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: install
+        run: npm ci
+
+      # Writes `version` to the step outputs through the exec plugin in .releaserc.
+      # No release to cut means no output, and the alias step below skips itself.
+      - name: semantic-release
+        id: release
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+      # Separate from the release so a failed alias can be rerun on its own with
+      # workflow_dispatch, without cutting a second version.
+      - name: aliases
+        if: steps.release.outputs.version != '' || inputs.version != ''
+        env:
+          VERSION: ${{ steps.release.outputs.version || inputs.version }}
+        run: |
+          set -euo pipefail
+          # Typing the v is the obvious mistake, and without this the job fails on a
+          # missing `vv3.0.2` tag, which reads like the release went wrong.
+          case "${VERSION}" in
+            v*) echo "##[error] give the version without the leading v, e.g. 3.0.2" && exit 1 ;;
+          esac
+          # `vX.Y.Z^{}` is the commit the tag points at. Without the peel a major tag
+          # made from an annotated tag would point at the tag object rather than the
+          # commit, and pushing the tag ref at `release` would create refs/tags/release
+          # instead of moving the branch.
+          major="v${VERSION%%.*}"
+          git fetch --tags --force origin
+          git tag -f "${major}" "v${VERSION}^{}"
+          git push -f origin "${major}"
+          # Plain push: a diverged release branch must fail the job, not be rewritten.
+          git push origin "v${VERSION}^{}:refs/heads/release"
+
+      - name: verify the aliases
+        if: steps.release.outputs.version != '' || inputs.version != ''
+        env:
+          VERSION: ${{ steps.release.outputs.version || inputs.version }}
+        run: |
+          set -euo pipefail
+          major="v${VERSION%%.*}"
+          commit=$(git rev-parse "v${VERSION}^{}")
+          echo "released commit: ${commit}"
+          git ls-remote origin "refs/tags/${major}" "refs/heads/release"
+          test "$(git ls-remote origin "refs/tags/${major}" | cut -f1)" = "${commit}" \
+            || (echo "##[error] ${major} does not point at ${commit}" && exit 1)
+          test "$(git ls-remote origin refs/heads/release | cut -f1)" = "${commit}" \
+            || (echo "##[error] the release branch does not point at ${commit}" && exit 1)

@@ -30,3 +30,29 @@ commit being released; stop and fix that before letting a real run happen.
 
 The dry run needs a `GITHUB_TOKEN` (or `GH_TOKEN`) in the environment with read access
 to the repository.
+
+## The first `release` branch alias is a force-push the workflow will not do
+
+The `aliases` step in `.github/workflows/ci.yml` moves `vN` with a forced tag push and
+puts the released commit on the `release` branch with a plain, non-forcing push, so a
+diverged branch fails the job loudly instead of being silently rewritten.
+
+`release` today has unrelated history from `master`, so that plain push is rejected. The
+one-time `git push -f origin master:release` in the `/release` skill has to happen once,
+by hand and with the owner's confirmation, before the automated alias step can succeed.
+Every release after that is a fast-forward.
+
+Once a release run has finished, confirm the aliases from the remote rather than from
+the job log:
+
+```sh
+git ls-remote --tags origin v3 vX.Y.Z
+git ls-remote --heads origin release
+```
+
+How many lines `vX.Y.Z` prints depends on who made it. semantic-release creates a
+lightweight tag, so an automated release prints one line and that line is already the
+commit. The manual procedure creates an annotated tag with `git tag -a`, which prints
+two: `refs/tags/vX.Y.Z` is the tag object and `refs/tags/vX.Y.Z^{}` is the commit.
+Compare against the `^{}` line whenever there is one. `v3` is always lightweight, so its
+single line is the commit. All of them must be the same commit as the `release` head.
