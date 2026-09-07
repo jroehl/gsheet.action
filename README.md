@@ -129,6 +129,8 @@ The only change is the version reference. Command syntax, inputs and outputs are
 +      uses: jroehl/gsheet.action@v3
 ```
 
+(Shown from `@v2.1.1`, the last v2 release; the same one-line change applies whichever v2.x you're currently pinned to, including the older `@v2.0.0` used in earlier versions of this README.)
+
 `@release` still works but is deprecated in favor of `@v3`; move off it when convenient.
 
 ## Supported commands

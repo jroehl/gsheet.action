@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a tag-based release of the action - link the pre-v3 tag history once, verify dist/, tag vX.Y.Z, move the major tag, alias the release branch. Never pushes without explicit confirmation for that specific push.
+description: Cut a tag-based release of the action - link the pre-v3 tag history once, verify dist/, tag vX.Y.Z, move the major tag, alias the release branch. Never pushes or publishes a GitHub release without explicit confirmation for that specific action.
 disable-model-invocation: true
 ---
 
@@ -17,7 +17,7 @@ No tag from the `v1.x`/`v2.x` line is an ancestor of `master` - the release-bran
 
 1. Check whether it's already done: `git merge-base --is-ancestor v2.1.1 HEAD`. Exit code `0` means the link exists - skip to "Release".
 2. On `master`: `git merge -s ours --allow-unrelated-histories v2.1.1 -m "chore: link release history"`.
-3. Verify the merge touched no files: `git diff HEAD~1 --stat` must be empty. A non-empty diff means it picked up more than history linkage - stop and investigate before continuing.
+3. Verify the merge touched no files: `git diff HEAD~1 --stat` must be empty. A non-empty diff means it picked up more than history linkage - stop and investigate before continuing. Because the merge changes no files, the commit it creates carries forward the exact tree CI already validated on the pre-merge `master` commit - the "CI is green" precondition above still holds for the commit that actually gets tagged, even though CI hasn't literally run on this new merge commit.
 4. Push `master` with this merge commit: `git push origin master`. Needs the owner's confirmation, like any push.
 
 ## Release
@@ -34,17 +34,18 @@ No tag from the `v1.x`/`v2.x` line is an ancestor of `master` - the release-bran
 
 `release` is a deprecated but still-documented way to track the latest tag (`@release` in the README). Today it has unrelated history from `master` - its own old force-push lineage - so a plain push is rejected.
 
-- **First time only**, once `release` is being aliased onto the new tag history: `git push -f origin master:release`. Needs the owner's confirmation like any push - this one force-overwrites the branch.
-- **Every time after that**, `release` is an ancestor of `master` and the update is a plain fast-forward: `git push origin master:release`.
+1. Check which case applies, rather than relying on memory: `git fetch origin release` then `git merge-base --is-ancestor origin/release HEAD`.
+2. Exit code `1` (not an ancestor - the first time `release` is aliased onto the new tag history, or its history has diverged again): `git push -f origin master:release`. Needs the owner's explicit confirmation for this specific push - it force-overwrites the branch.
+3. Exit code `0` (`release` is already an ancestor of `master`, the normal case after the first alias): `git push origin master:release`. Still needs the owner's explicit confirmation for this specific push - a fast-forward is still a push to a public branch, not something to run on autopilot.
 
 ## Verify
 
 Verify by reading the remote independently, not by trusting what the push commands printed:
 
-- `git ls-remote --tags origin` - `vX.Y.Z` and the major tag `vN` must point at the same commit.
-- `git ls-remote --heads origin release` - `release` must point at that same commit.
+- `git ls-remote --tags origin v$ARGUMENTS v3` (substitute whichever major tag). `vX.Y.Z` is annotated, so it prints two lines: `refs/tags/vX.Y.Z` is the tag *object's own* SHA - not what you want - and `refs/tags/vX.Y.Z^{}` is the dereferenced commit it points to - that's the one to compare. `vN` is lightweight, so its single line is already a commit SHA. The `vX.Y.Z^{}` line and the `vN` line must match; comparing the plain `vX.Y.Z` line against `vN` will look broken even on a correct release.
+- `git ls-remote --heads origin release` - `release` must point at that same commit (the one on the `vX.Y.Z^{}` and `vN` lines above).
 
-Once verified, create the GitHub release: `gh release create v$ARGUMENTS --generate-notes`.
+Once verified, create the GitHub release. This is a public, irreversible remote action like a push and needs the same explicit confirmation from the owner for this specific release: `gh release create v$ARGUMENTS --generate-notes`.
 
 ## Rollback
 
