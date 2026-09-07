@@ -83,7 +83,9 @@ Each push below is a separate action needing the owner's explicit confirmation f
 
     Releasing nothing is the pass: there is nothing after the tag to release. The two failures are `No git tag version found on branch master` followed by a `1.0.0` - step 3 did not take - and `Found git tag v2.1.1 associated with version 2.1.1` followed by a `2.x` - the link is there but `v3.0.0` is not reachable, so step 5 or step 8 did not land. *Stops here* on either: no further push to `master` until the baseline reads `3.0.0`. Once PR B is merged the same command on `master` names `3.0.0` as the last release and a `3.x` as the next one. `test-docs/revive-v3.md` records this gate too.
 
-11. **Merge PR B.** Only now. Its push to `master` is the first real automated release.
+11. **Squash-merge PR B.** Only now. Its push to `master` is the first real automated release.
+
+    Squash, not merge or rebase, and the same goes for PR A at step 1. Both branches were built with commit trailers naming an assistant, which this repository's owner does not want in its history: 14 such lines across PR A's 17 commits and 42 across PR B's. A squash merge writes one fresh commit message and drops every one of them; a merge or rebase carries them onto `master` permanently. Check the squash message GitHub proposes before confirming - it concatenates the branch's commit bodies by default, so the trailers reappear there unless you clear it and write the message yourself.
 
 ## Re-running the aliases on their own
 
