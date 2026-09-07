@@ -145,7 +145,7 @@ Rename an existing worksheet to the specified title
 Updates cells with the specified data (at the specified range)
 
 - args
-  - data:string - The data to be used as a JSON string - nested array [["1", "2", "3"]]
+  - data:json - The data to be used as a JSON string - nested array [["1", "2", "3"]]
   - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
   - [minRow=1]?:number - Starting row of the operation
   - [minCol=1]?:number - Starting column of the operation
@@ -158,7 +158,7 @@ Updates cells with the specified data (at the specified range)
 Append cells with the specified data after the last row (in starting col)
 
 - args
-  - data:string - The data to be used as a JSON string - nested array [["1", "2", "3"]]
+  - data:json - The data to be used as a JSON string - nested array [["1", "2", "3"]]
   - [spreadsheetId]?:string - The id of the spreadsheet (needed if no previous command set the spreadsheetId globally)
   - [minCol=1]?:number - Starting column of the operation
   - [range]?:string - Range in a1 notation to be used for the operation

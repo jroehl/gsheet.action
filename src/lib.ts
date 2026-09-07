@@ -27,20 +27,45 @@ export const asyncForEach = async <T>(
 };
 
 /**
- * Helper to convert json strings to objects
+ * Convert an argument value to the type its descriptor declares
  *
  * @param {string} arg
- * @returns {(string | object)}
+ * @param {unknown} value
+ * @returns {unknown}
  */
-const initParse =
-  (args: Arg) =>
-  (arg: string): string | Record<string, unknown> => {
-    try {
-      return JSON.parse(args[arg]);
-    } catch (_) {
-      return args[arg];
+const coerce = (arg: string, value: unknown): unknown => {
+  const { type } = config.descriptions[arg];
+  switch (type) {
+    case 'number': {
+      if (typeof value === 'number') return value;
+      // Number('') and Number(' ') are 0, which would silently shift a range
+      const parsed =
+        typeof value === 'string' && value.trim() ? Number(value) : NaN;
+      if (!Number.isFinite(parsed))
+        throw new Error(`Argument "${arg}" must be a number`);
+      return parsed;
     }
-  };
+    case 'boolean': {
+      if (typeof value === 'boolean') return value;
+      if (value === 'true') return true;
+      if (value === 'false') return false;
+      throw new Error(`Argument "${arg}" must be true or false`);
+    }
+    case 'json': {
+      if (typeof value === 'object' && value !== null) return value;
+      try {
+        return JSON.parse(value as string);
+      } catch (err) {
+        throw new Error(
+          `Argument "${arg}" has to be valid JSON (${(err as Error).message})`
+        );
+      }
+    }
+    default:
+      // "string" and anything without a declared type is passed through
+      return value;
+  }
+};
 
 /**
  * Validate the commands as a string and return valid command array
@@ -70,7 +95,7 @@ export const validateCommands = (commandString: string): ValidatedCommand[] => {
     const {
       func,
       args: { required = [], optional = [] } = {},
-      options,
+      options = [],
     } = commandConfig;
 
     const missingArgs = required.filter((arg) => args[arg] === undefined);
@@ -81,16 +106,33 @@ export const validateCommands = (commandString: string): ValidatedCommand[] => {
         )}"`
       );
 
-    const parse = initParse(args);
-    let kwargs = [...required.map(parse), ...optional.map(parse)];
-    if (options) {
-      const parsedOptions = options.reduce(
-        (acc, option) =>
-          args[option] !== undefined ? { ...acc, [option]: args[option] } : acc,
-        {}
-      );
-      kwargs = [...required.map(parse), parsedOptions, ...optional.map(parse)];
+    const coerced: { [arg: string]: unknown } = {};
+    for (const arg of [...required, ...optional, ...options]) {
+      if (args[arg] !== undefined) coerced[arg] = coerce(arg, args[arg]);
     }
+
+    const data = coerced[Arg.data];
+    if (
+      data !== undefined &&
+      (!Array.isArray(data) || !data.length || !data.every(Array.isArray))
+    )
+      throw new Error(
+        `Argument "${Arg.data}" has to be a non-empty array of arrays`
+      );
+
+    const collectedOptions = options.reduce(
+      (acc, option) =>
+        coerced[option] !== undefined
+          ? { ...acc, [option]: coerced[option] }
+          : acc,
+      {}
+    );
+
+    const kwargs = [
+      ...required.map((arg) => coerced[arg]),
+      ...(commandConfig.options ? [collectedOptions] : []),
+      ...optional.map((arg) => coerced[arg]),
+    ];
 
     return { func, kwargs };
   });
