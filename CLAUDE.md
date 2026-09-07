@@ -8,7 +8,7 @@ A GitHub Action that runs a JSON list of Google Sheets CRUD commands. `src/` is 
 
 ## Commands
 
-- `npm run all` runs clean, build, format, lint, package, test. Run it before committing; CI rebuilds the bundle and fails if the committed `dist/` does not match it.
+- `npm run all` runs clean, build, format, lint, package, test. Run it before committing; CI rebuilds the bundle and fails if the committed `dist/` does not match it. CI runs the read-only halves of the same thing - `format-check` and `lint:check`, which is `lint` without `--fix`.
 - `npm test` runs jest. `src/main.test.ts` calls the real Sheets API and needs `GSHEET_CLIENT_EMAIL`, `GSHEET_PRIVATE_KEY` and `TEST_SPREADSHEET_ID` in the env; it skips itself without them, so `src/lib.test.ts` and `src/main.offline.test.ts` are the offline suite. The live path is covered by the `e2e` job, which reads the three values from repository secrets and does not run for fork PRs.
 - `npm run package` builds `lib/` and bundles `lib/main.js` into `dist/index.js` with ncc. `action.yml` runs that file. `dist/` is committed: it is what users execute, and CI fails if it does not match `src/`.
 - `npm run document` regenerates the README block between `<!-- commands -->` and `<!-- commandsstop -->` from `src/config.ts`. Never edit that block by hand.
@@ -21,14 +21,17 @@ A GitHub Action that runs a JSON list of Google Sheets CRUD commands. `src/` is 
 
 ## Release
 
-The `release` and `preview/*` force-push machinery is gone: `.github/workflows/ci.yml` only tests, checks `dist/` and runs the e2e. Releasing is tag-based and manual; the procedure lives in `.claude/skills/release/SKILL.md`.
+`.github/workflows/ci.yml` is the only workflow. Jobs `test`, `dist-check` and `e2e` run on pull requests and on pushes to `master`; `release` runs after them and only when all three are green and the push is to `master`. It runs `semantic-release` (config in `.releaserc`, branch `master`, commit-analyzer plus release-notes-generator plus github plus one `exec` that hands the version to the next step), then an `aliases` step that moves the `v3` tag and the deprecated `release` branch onto the released commit. The alias push to `release` does not force, so a diverged branch fails the job instead of being rewritten.
 
-No `v1.x`/`v2.x` tag is an ancestor of `master` - the release-branch history and the tag history diverged before this repo moved to tag-based releases. The first `v3` release needs a one-time `git merge -s ours --allow-unrelated-histories v2.1.1` on `master` to link them, or `semantic-release` would read `master` as having no prior release and cut `1.0.0`. The `release` branch (the deprecated `@release` alias) similarly has unrelated history and needs one force-push to become an ancestor of `master`; every later update is a plain fast-forward. All git pushes and the GitHub release itself (`gh release create`) are the repository owner's action, each needing confirmation for that specific push or release - the skill documents the steps but never runs them.
+A `workflow_dispatch` with a `version` input skips the three test jobs and `semantic-release` and re-runs the alias movement alone. That is the recovery when a release tagged fine but the aliases did not land; re-running it on a correct release is a no-op.
+
+Two things have to happen by hand before any of that works, and both are the repository owner's, needing confirmation for that specific push. No `v1.x`/`v2.x` tag is an ancestor of `master` - the release-branch history and the tag history diverged - so `master` needs a one-time `git merge -s ours --allow-unrelated-histories v2.1.1`, or `semantic-release` reads it as having never released and cuts `1.0.0`. The `release` branch has unrelated history too and needs one force-push before the workflow's plain push can fast-forward it. The whole procedure, the `semantic-release --dry-run` that gates the first automated release, the manual tagging fallback and rollback are in `.claude/skills/release/SKILL.md`.
 
 ## Status (2026-09-07)
 
 Revival in progress. `action.yml` declares `node24`, arguments are coerced to the type their descriptor declares, `outputFile` keeps an oversized result from failing the step, and `dist/` is committed. The release skill, README and this file describe the `v3.0.0` procedure; the tag itself, the history-linking merge and all pushes are still to be done by the repository owner. Remaining sequence:
 
 1. Release `google-sheet-cli` 2.3.0 (fix release off its master).
-2. Owner runs the `release` skill for `3.0.0`: link history, tag `v3.0.0`, move `v3`, alias `release`.
-3. Close issues #611, #612, #616, #617 and PR #615.
+2. Owner runs the `release` skill for `3.0.0`: link history, force-push `release` once, tag `v3.0.0` by hand, move `v3`.
+3. Owner runs `npx semantic-release --dry-run --no-ci` on `master` and confirms it says `3.x`, never `1.0.0`. Until that passes, the `release` job must not run for real (`test-docs/revive-v3.md`).
+4. Close issues #611, #612, #616, #617 and PR #615.
