@@ -1,6 +1,6 @@
 ---
 name: release
-description: Release the action. CI does it on a green push to master; this covers the one-time history link that has to happen first, the dry run that gates the first automated release, re-running the aliases on their own, the manual tagging fallback, and rollback. Never pushes or publishes without explicit confirmation for that specific action.
+description: Release the action. CI does it on a green push to master; this covers the one-time setup sequence that has to happen first and the order it has to happen in, the dry run that gates the first automated release, re-running the aliases on their own, the manual tagging fallback, and rollback. Never pushes or publishes without explicit confirmation for that specific action.
 disable-model-invocation: true
 ---
 
@@ -10,43 +10,73 @@ Release version `$ARGUMENTS` (a semver like `3.0.0`, no `v` prefix). If no argum
 
 `.github/workflows/ci.yml` has a `release` job. On a push to `master` where `test`, `dist-check` and `e2e` are all green it runs `semantic-release`, which reads the commit messages, decides the version, tags it and creates the GitHub release. A second step then moves the floating major tag (`v3`) and the deprecated `release` branch onto that commit.
 
-So the normal release is: merge to `master`, watch CI, verify from the remote. Nothing below is needed for it. The rest of this file is the once-only setup, the recovery paths and the manual fallback.
+So the normal release is: merge to `master`, watch CI, verify from the remote. Nothing below is needed for it, once the one-time setup has been done. The rest of this file is that setup, the recovery paths and the manual fallback.
 
 ## Once, before the first automated release
 
-Both of these have to be done by hand, in this order, and each push needs the owner's explicit confirmation for that specific push.
+Nothing above works until `v3.0.0` exists on the remote, and the order below is the whole point of this section. **`git push origin master` comes last, after `v3.0.0` and `v3` are pushed.** Push master earlier and the workflow starts a release job on a `master` from which only the linked `v1`/`v2` tags are reachable; `semantic-release` then reads the v2 line as its baseline and cuts **2.2.0** - a published GitHub release and a permanent `v2.2.0` tag carrying v3 code, followed by the alias step force-moving `v2` onto the breaking v3 action. Neither can be taken back. The `release` job's guard refuses a push with no `v3.*` tag reachable, so this is belt and braces, but the guard is there to catch the mistake, not to make the order optional.
 
-### 1. Link the pre-v3 tag history
+For the same reason: **PR B (the toolchain PR) must not be merged until `v3.0.0` is reachable from `master`.** Merging it is a push to `master`.
 
-No tag from the `v1.x`/`v2.x` line is an ancestor of `master` - the release-branch history and the tag history diverged before this repo moved to tag-based releases. Left alone, `semantic-release` reads `master` as a repository that has never released and cuts `1.0.0`, publishing a `v1` tag over the v1 line.
+Each push below is a separate action needing the owner's explicit confirmation for that specific push. Approving one is not approval of the next.
 
-1. Check whether it's already done: `git merge-base --is-ancestor v2.1.1 HEAD`. Exit code `0` means the link exists - skip ahead.
-2. On `master`: `git merge -s ours --allow-unrelated-histories v2.1.1 -m "chore: link release history"`.
-3. Verify the merge touched no files: `git diff HEAD~1 --stat` must be empty. A non-empty diff means it picked up more than history linkage - stop and investigate. Because the merge changes no files, the commit it creates carries forward the exact tree CI already validated on the pre-merge `master` commit.
-4. `git push origin master`.
+### The sequence
 
-### 2. Point the `release` branch at the new history
+1. **Squash-merge PR A** (the v3.0.0 hotfix) into `master` on GitHub, with CI green on it.
+   *Stops here if* CI is not green, or if `google-sheet-cli` 2.3.0 is not yet released and PR A still needs its version bump.
 
-`release` is a deprecated but still-documented way to track the latest tag (`@release` in the README). Today it has unrelated history from `master` - its own old force-push lineage - so the plain push the workflow's alias step makes is rejected. One force-push fixes that for good; every later release fast-forwards.
+2. **Rebase `toolchain` (PR B) onto the new `master` and re-verify the bundle.** On that branch: `npm ci && npm run all`, then `git diff --exit-code dist/`. Do not merge it; this is only so PR B is known-good and ready for step 11.
+   *Stops here if* `dist/` differs - fix and push the rebuilt bundle onto PR B before going on. Nothing after this depends on PR B, so a red PR B is not a reason to delay the release; it is a reason not to merge it.
 
-1. `git fetch origin release` then `git merge-base --is-ancestor origin/release HEAD`.
-2. Exit code `1` (not an ancestor): `git push -f origin master:release`. It force-overwrites a public branch, so confirm this specific push. `master` is the right source only here, before the first release, when nothing is tagged yet; afterwards always alias from the tag (see "Re-running the aliases on their own").
-3. Exit code `0`: nothing to do, the workflow handles it from here.
+3. **Link the pre-v3 tag history, locally.** No tag from the `v1.x`/`v2.x` line is an ancestor of `master` - the release-branch history and the tag history diverged before this repo moved to tag-based releases. Left alone, `semantic-release` reads `master` as a repository that has never released and cuts `1.0.0`.
 
-### 3. Cut `v3.0.0` by hand, then prove semantic-release agrees
+   - Check whether it is already done: `git merge-base --is-ancestor v2.1.1 HEAD`. Exit code `0` means the link exists - skip to step 4.
+   - On `master`: `git merge -s ours --allow-unrelated-histories v2.1.1 -m "chore: link release history"`.
+   - `git diff HEAD~1 --stat` must be empty. Because the merge changes no files, the commit it creates carries forward the exact tree CI already validated on the pre-merge `master` commit.
 
-`semantic-release` cannot be trusted to pick the version until a tag is reachable from `master`. The `release` job knows this: a step before `semantic-release` fails the run when `git tag --merged HEAD` is empty, so a push to `master` before step 1 is done goes red rather than publishing `1.0.0`. That step only stops the worst outcome - it does not tell you which version you would get. So cut the first release manually with the fallback below, then, on a fresh checkout of `master` with a `GITHUB_TOKEN` in the env:
+   Do **not** push `master` here. *Stops here if* the diff is not empty - the merge picked up more than history linkage; investigate before anything is tagged or pushed.
 
-```sh
-git fetch --tags
-npx semantic-release --dry-run --no-ci
-```
+4. **Build and tag `v3.0.0` locally.** `git status --short` must be empty and the branch must be `master`. Run `npm run all` (clean, build, format, lint, package, test) with `GSHEET_CLIENT_EMAIL`, `GSHEET_PRIVATE_KEY` and `TEST_SPREADSHEET_ID` set, then `git diff --exit-code dist/`. Then:
 
-It must say it would publish a `3.x` version. If it says `1.0.0`, step 1 did not take - stop, because a real run would tag `v1` over the v1 line. Only once this passes should a push to `master` be allowed to reach the `release` job. `test-docs/revive-v3.md` records this gate too.
+   ```sh
+   git tag -a v3.0.0 -m "v3.0.0"
+   git tag -f v3 "v3.0.0^{}"
+   ```
+
+   The `^{}` matters: without it `v3` points at the annotated tag object rather than the commit. *Stops here if* `npm run all` fails, if `dist/` is dirty after the rebuild, or if the three credentials are not set - without them the live-API tests in `src/main.test.ts` skip themselves, so say so and stop rather than tag something untested.
+
+5. **`git push origin v3.0.0`** (confirmation). This publishes the tag and every object it reaches, but leaves the remote `master` branch where it was. That is deliberate: the remote now has the release commit without any workflow having run on a `master` push.
+
+6. **`git push -f origin v3`** (confirmation).
+
+7. **Point the `release` branch at the release**, one force-push (confirmation):
+
+   ```sh
+   git push -f origin "v3.0.0^{}:refs/heads/release"
+   ```
+
+   `release` is a deprecated but still-documented way to track the latest tag (`@release` in the README). Today it has unrelated history from `master` - its own old force-push lineage - so the plain push the workflow's alias step makes is rejected. This one force fixes that for good; every later release fast-forwards. Alias from the tag, never from `master`.
+
+8. **`git push origin master`** (confirmation). **Last.** This is the first push that can reach the `release` job. The guard passes now because `v3.0.0` is reachable from `HEAD`; `semantic-release` finds it as the baseline with no commits after it and releases nothing, which is the correct outcome. *Stops here if* steps 5 to 7 did not all land - check `git ls-remote` first and finish them, rather than letting the workflow discover the gap.
+
+9. **`gh release create v3.0.0 --generate-notes`** (confirmation). Public and irreversible.
+
+10. **Run the dry run as the gate on everything after this.** The workflow guard stops the worst outcome; it does not tell you which version you would get. On a fresh checkout of `master` with a `GITHUB_TOKEN` in the env:
+
+    ```sh
+    git fetch --tags
+    npx semantic-release --dry-run --no-ci
+    ```
+
+    It must say it would publish a `3.x` version. `1.0.0` means step 3 did not take. `2.x` means `v3.0.0` is not reachable from the checked-out `master`, so step 5 or step 8 did not land. *Stops here* on either: no further push to `master` until it reads `3.x`. `test-docs/revive-v3.md` records this gate too.
+
+11. **Merge PR B.** Only now. Its push to `master` is the first real automated release.
 
 ## Re-running the aliases on their own
 
 If `semantic-release` tagged and published but the alias step failed - a diverged `release` branch, an expired token, a cancelled run - do not release again. Run the CI workflow with `workflow_dispatch` and give it the version that was released (e.g. `3.0.2`). That path skips `test`, `dist-check`, `e2e` and `semantic-release` and runs the alias movement alone. Running it against a version whose aliases are already correct is a clean no-op.
+
+That dispatch is single-purpose: it re-aliases an already released version and nothing else. It cannot be used to re-run CI on `master`. Its `version` input is `required: true`, so there is no way to start it without naming a release, and all three test jobs carry `if: github.event_name != 'workflow_dispatch'` and skip. To re-run the tests, re-run the workflow run itself from the Actions tab, or push a commit.
 
 If the alias step failed because `release` has diverged, the plain push will keep failing until someone decides what happened to that branch. Once the divergence is understood, put `release` back on the released commit with one force-push, then re-run the dispatch:
 
@@ -58,7 +88,7 @@ Owner confirmation, like any force-push. Use the tag, not `master`: by the time 
 
 ## Manual fallback: tag by hand
 
-Use this when the workflow itself is broken, or for the first `v3.0.0` before the automation is trusted.
+Use this when the workflow itself is broken. For the first `v3.0.0` follow the sequence above instead - it is this procedure with the ordering constraint that only applies before the first release.
 
 1. Preconditions: `git status --short` empty, current branch `master`, CI green on the commit being released (`gh run list --branch master --limit 1`).
 2. Run `npm run all` (clean, build, format, lint, package, test) with `GSHEET_CLIENT_EMAIL`, `GSHEET_PRIVATE_KEY` and `TEST_SPREADSHEET_ID` set. Stop on any failure and show the output; without those three set the live-API tests in `src/main.test.ts` skip themselves, so say so and stop rather than releasing untested.
@@ -68,7 +98,7 @@ Use this when the workflow itself is broken, or for the first `v3.0.0` before th
 6. Push, each with its own confirmation - approving one is not approval of the next:
    - `git push origin v$ARGUMENTS`
    - `git push -f origin v3`
-   - `git push origin "v$ARGUMENTS^{}:refs/heads/release"` (the first time, see step 2 of the setup above, this has to be `git push -f origin master:release` instead)
+   - `git push origin "v$ARGUMENTS^{}:refs/heads/release"`
 7. `gh release create v$ARGUMENTS --generate-notes`. Public and irreversible, so confirm this specific release.
 
 ## Verify

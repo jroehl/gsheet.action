@@ -253,7 +253,9 @@ There are three ways to reference the action, in the order you probably want the
 - `@v3.0.0` - an exact release. Pin this if you want to decide every upgrade yourself.
 - `@release` - a branch that tracks the latest release. **Deprecated**; it predates the tags and is kept working only so existing workflows do not break. Move to `@v3` when convenient.
 
-Releases are cut by CI. A push to `master` whose tests, `dist/` check and end-to-end run are all green runs [semantic-release](https://github.com/semantic-release/semantic-release), which reads the commit messages, decides the version, tags it and publishes the GitHub release; a second step then moves `v3` and `release` onto that commit. Nothing is released from a pull request, and a failing end-to-end run blocks the release.
+Releases are cut by CI from `v3.0.0` onwards. A push to `master` whose tests, `dist/` check and end-to-end run are all green runs [semantic-release](https://github.com/semantic-release/semantic-release), which reads the commit messages, decides the version, tags it and publishes the GitHub release; a second step then moves `v3` and `release` onto that commit. Nothing is released from a pull request, and a failing end-to-end run blocks the release.
+
+`v3.0.0` itself is tagged by hand, because the tag history and the old release-branch history had diverged and `semantic-release` needs a v3 tag to read as its baseline. Until that tag exists on the remote, the release job refuses to run rather than guessing a version. If you are reading this before `v3.0.0` is published, `@v3` and `@release` do not resolve yet - use a `v2.x` ref until they do.
 
 ## License
 
