@@ -21,12 +21,11 @@ jest.mock('@actions/core', () => {
   };
 });
 
-// Step 17 re-points this specifier to 'google-sheet-cli/sheet'.
 // The tests below need the real client; the stub only keeps the offline run
-// from loading googleapis for a block it is going to skip anyway.
-jest.mock('google-sheet-cli/lib/lib/google-sheet', () =>
+// from loading the Sheets client for a block it is going to skip anyway.
+jest.mock('google-sheet-cli/sheet', () =>
   process.env.TEST_SPREADSHEET_ID
-    ? jest.requireActual('google-sheet-cli/lib/lib/google-sheet')
+    ? jest.requireActual('google-sheet-cli/sheet')
     : { __esModule: true, default: class {} }
 );
 

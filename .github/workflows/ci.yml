@@ -75,8 +75,9 @@ jobs:
       - name: package
         run: npm run package
 
-      # ncc can emit lazily loaded <id>.index.js chunks beside index.js. A new one is
-      # untracked, which `git diff` does not report, so ask for both kinds of change.
+      # ncc splits the bundle: index.js loads <id>.index.js lazily, by a filename it builds at
+      # runtime. A chunk that was never committed is therefore invisible to `git diff` and
+      # crashes only on the code path that needs it, so untracked files count as a mismatch too.
       - name: verify dist is up to date
         run: |
           git diff --ignore-space-at-eol --exit-code dist/ \

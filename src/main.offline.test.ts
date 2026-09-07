@@ -29,10 +29,9 @@ jest.mock('@actions/core', () => {
   };
 });
 
-// Step 17 re-points this specifier to 'google-sheet-cli/sheet'.
 // Stubbed unconditionally so these tests exercise the output handling
 // without credentials and without a payload the real API would have to hold.
-jest.mock('google-sheet-cli/lib/lib/google-sheet', () => ({
+jest.mock('google-sheet-cli/sheet', () => ({
   __esModule: true,
   default: class {
     async authorize(): Promise<void> {

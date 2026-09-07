@@ -8,7 +8,7 @@ import {
   setOutput,
   warning,
 } from '@actions/core';
-import GoogleSheet from 'google-sheet-cli/lib/lib/google-sheet';
+import GoogleSheet from 'google-sheet-cli/sheet';
 import { ValidatedCommand, asyncForEach, validateCommands } from './lib';
 
 // GitHub caps what a step may hand to the next one. Above this the results are
