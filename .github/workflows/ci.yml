@@ -289,8 +289,22 @@ jobs:
           set -euo pipefail
           # Typing the v is the obvious mistake, and without this the job fails on a
           # missing `vv3.0.2` tag, which reads like the release went wrong.
+          #
+          # The major line is checked for the same reason the release step above is
+          # gated, and the pattern here has to be raised at v4 alongside it. This step
+          # runs on workflow_dispatch, which skips that gate, and it derives the alias
+          # from whatever version is typed: a dispatch naming 2.0.0 would force-move the
+          # public v2 tag off v2.1.1 and rewind the release branch to match, breaking
+          # everyone pinned to @v2 to recover a release that is not on this line at all.
           case "${VERSION}" in
             v*) echo "##[error] give the version without the leading v, e.g. 3.0.2" && exit 1 ;;
+            3.*) ;;
+            *)
+              echo "##[error] this workflow aliases the v3 line only, and ${VERSION} is not"
+              echo "##[error] on it. Moving an older major's alias from here would break"
+              echo "##[error] everyone pinned to it. Re-tag that line by hand instead."
+              exit 1
+              ;;
           esac
           # `vX.Y.Z^{}` is the commit the tag points at. Without the peel a major tag
           # made from an annotated tag would point at the tag object rather than the
