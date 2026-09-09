@@ -31,7 +31,7 @@ describe('lib', () => {
         validateCommands(
           JSON.stringify([{ command: 'wrongCommand', args: { foo: 'bar' } }])
         )
-      ).toThrowError(
+      ).toThrow(
         'Command "wrongCommand" not found - must be one of: "addSpreadsheet", "getSpreadsheet", "addWorksheet", "getWorksheet", "removeWorksheet", "renameWorksheet", "updateData", "appendData", "getData"'
       );
     });
@@ -41,7 +41,7 @@ describe('lib', () => {
         validateCommands(
           JSON.stringify([{ command: 'addWorksheet', args: { foo: 'bar' } }])
         )
-      ).toThrowError(
+      ).toThrow(
         'Required arguments for "addWorksheet" missing: "worksheetTitle"'
       );
     });
@@ -62,7 +62,7 @@ describe('lib', () => {
       });
 
       it('rejects data that is not valid JSON', () => {
-        expect(() => validateOne('updateData', { data: 'nope' })).toThrowError(
+        expect(() => validateOne('updateData', { data: 'nope' })).toThrow(
           'Argument "data" has to be valid JSON'
         );
       });
@@ -80,15 +80,15 @@ describe('lib', () => {
       });
 
       it('rejects data that is not an array of arrays', () => {
-        expect(() => validateOne('updateData', { data: [1] })).toThrowError(
+        expect(() => validateOne('updateData', { data: [1] })).toThrow(
           'Argument "data" has to be an array of arrays'
         );
       });
 
       it('rejects data that is not an array at all', () => {
-        expect(() =>
-          validateOne('updateData', { data: '"nope"' })
-        ).toThrowError('Argument "data" has to be an array of arrays');
+        expect(() => validateOne('updateData', { data: '"nope"' })).toThrow(
+          'Argument "data" has to be an array of arrays'
+        );
       });
 
       it('coerces a numeric option to a number', () => {
@@ -120,7 +120,7 @@ describe('lib', () => {
       it('rejects a non numeric string for a numeric option', () => {
         expect(() =>
           validateOne('updateData', { data: [[1]], minCol: 'abc' })
-        ).toThrowError('Argument "minCol" must be a number');
+        ).toThrow('Argument "minCol" must be a number');
       });
 
       it('coerces a boolean option to a boolean', () => {

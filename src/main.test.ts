@@ -11,7 +11,7 @@ jest.mock('@actions/core', () => {
         ({
           spreadsheetId: process.env.TEST_SPREADSHEET_ID,
           commands,
-        }[key])
+        })[key]
     ),
     setOutput: jest.fn(),
     debug: jest.fn(),

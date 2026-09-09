@@ -1,26 +1,42 @@
 version: 2
 updates:
-- package-ecosystem: npm
-  directory: "/"
-  schedule:
-    interval: weekly
-    time: "04:00"
-  open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: eslint
-    versions:
-    - 7.24.0
-  - dependency-name: "@types/jest"
-    versions:
-    - 26.0.21
-  - dependency-name: eslint-plugin-jest
-    versions:
-    - 24.3.2
-  - dependency-name: husky
-    versions:
-    - 5.0.9
-    - 5.1.0
-    - 5.1.2
-  - dependency-name: eslint-config-prettier
-    versions:
-    - 8.0.0
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: monthly
+      time: '04:00'
+    open-pull-requests-limit: 10
+    groups:
+      # One PR a month for everything routine. Majors stay ungrouped: they get
+      # their own PR because they are the ones worth reading.
+      minor-and-patch:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # The two runtime dependencies are bundled into the committed dist/.
+      # Dependabot cannot rebuild it, so any PR that bumps them fails dist-check
+      # by construction. Bump these by hand and commit the rebuilt bundle with
+      # the version change.
+      # An `ignore` entry also suppresses Dependabot's *security* PRs for that
+      # package, not just the version-update ones, so these two are not covered
+      # by automatic security updates. Watch the repository's Dependabot alerts
+      # and bump them by hand when one lands.
+      - dependency-name: '@actions/core'
+      - dependency-name: 'google-sheet-cli'
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: monthly
+      time: '04:00'
+    open-pull-requests-limit: 10
+    groups:
+      actions:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch

@@ -5,12 +5,32 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Released version to re-alias, without the v (e.g. 3.0.2). Moves vN and the release branch onto that tag; does not release.'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+# Releases push tags and a branch, so two runs on the same ref must not overlap.
+# A push to master is never cancelled: a cancelled release run leaves the tag pushed
+# and the aliases half moved. A superseded pull-request run is, because every one of
+# them spends a live end-to-end run against the shared spreadsheet and only the newest
+# push to the branch is worth that. The cost of cancelling: the e2e job creates and
+# removes its worksheet inside one step with no always-run cleanup, so a run killed
+# mid-step leaves an orphan behind. They are named gsheet.action_e2e_<epoch>_<sha>, and
+# reclaiming them is the CLI's cleanup cron rather than anything in this workflow.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
+    # workflow_dispatch only re-aliases an already released version, so nothing to test.
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -26,11 +46,20 @@ jobs:
       - name: build
         run: npm run build
 
+      # The release procedure runs `npm run all`, which lints and formats. Both are
+      # checked here so a release never stops at a failure CI could have caught.
+      - name: format
+        run: npm run format-check
+
+      - name: lint
+        run: npm run lint:check
+
       # No credentials: the live suite in src/main.test.ts skips itself, the e2e job covers it.
       - name: test
         run: npm test
 
   dist-check:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -59,11 +88,13 @@ jobs:
                 && exit 1)
 
   e2e:
-    # Forks do not get the repository secrets, so only run this for branches of this repository.
-    # Dependabot's branch is in this repository but GitHub hands its runs the fork treatment, so
-    # the credentials would resolve empty and every update PR would carry a permanently red
-    # check. Skip it rather than duplicate the secrets into the Dependabot store.
-    if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    # Forks do not get the repository secrets, so only run this for branches of this
+    # repository. workflow_dispatch never reaches it either - it releases nothing.
+    # Dependabot's branch is in this repository but GitHub hands its runs the fork
+    # treatment, so the credentials would resolve empty and every grouped monthly PR
+    # would carry a permanently red check. Skip it rather than let that pressure build;
+    # see CONTRIBUTING.md if live coverage on those PRs is ever wanted.
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-latest
     env:
       GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
@@ -186,3 +217,117 @@ jobs:
           assert ".results[7].result.rawData[0][0]" "=" "1"
 
           echo "🎉 Tests successful"
+
+  release:
+    needs: [test, dist-check, e2e]
+    # always(), because on workflow_dispatch all three needs are skipped and a skipped
+    # need would otherwise skip this job too. The push arm then has to name every
+    # result explicitly - that is what keeps a red or skipped e2e from releasing.
+    if: always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.test.result == 'success' && needs.dist-check.result == 'success' && needs.e2e.result == 'success'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      # fetch-depth 0 for the whole history semantic-release reads, and for the tags
+      # the alias step resolves on a workflow_dispatch rerun.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: install
+        run: npm ci
+
+      # DELIBERATE ONE-TIME GATE FOR THE v3 LINE. Do not delete this step as noise, and
+      # raise the pattern to 'v4.*' when v4.0.0 is cut (and again at every major).
+      #
+      # Two ways semantic-release picks a wrong version here, and the pattern covers both:
+      # with no tag reachable from HEAD it reads this as a repository that has never
+      # released and cuts 1.0.0; with only the pre-v3 tags reachable - exactly the state
+      # right after the one-time `merge -s ours v2.1.1` and before v3.0.0 is pushed - it
+      # reads the v2 line as the baseline and cuts 2.2.0 over v3 code, publishing a
+      # GitHub release and a permanent v2.2.0 tag and then force-moving the v2 alias
+      # onto the breaking v3 action. Both are irreversible, so require a tag on the
+      # current major line rather than merely any tag. The floating `v3` alias does not
+      # match: the dot makes this a real vX.Y.Z release tag.
+      - name: refuse to release from an unlinked history
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          if [ -z "$(git tag --merged HEAD --list 'v3.*')" ]; then
+            echo "##[error] no v3.x tag is reachable from HEAD, so semantic-release would cut"
+            echo "##[error] 1.0.0 (no tag at all) or 2.x (only the linked pre-v3 tags)."
+            echo "##[error] Finish the one-time setup first, in the documented order: see"
+            echo "##[error] 'Once, before the first automated release' in"
+            echo "##[error] .claude/skills/release/SKILL.md. master is pushed last, after"
+            echo "##[error] v3.0.0 exists on the remote."
+            exit 1
+          fi
+
+      # Writes `version` to the step outputs through the exec plugin in .releaserc.
+      # No release to cut means no output, and the alias step below skips itself.
+      - name: semantic-release
+        id: release
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+      # Separate from the release so a failed alias can be rerun on its own with
+      # workflow_dispatch, without cutting a second version.
+      - name: aliases
+        if: steps.release.outputs.version != '' || inputs.version != ''
+        env:
+          VERSION: ${{ steps.release.outputs.version || inputs.version }}
+        run: |
+          set -euo pipefail
+          # Typing the v is the obvious mistake, and without this the job fails on a
+          # missing `vv3.0.2` tag, which reads like the release went wrong.
+          #
+          # The major line is checked for the same reason the release step above is
+          # gated, and the pattern here has to be raised at v4 alongside it. This step
+          # runs on workflow_dispatch, which skips that gate, and it derives the alias
+          # from whatever version is typed: a dispatch naming 2.0.0 would force-move the
+          # public v2 tag off v2.1.1 and rewind the release branch to match, breaking
+          # everyone pinned to @v2 to recover a release that is not on this line at all.
+          case "${VERSION}" in
+            v*) echo "##[error] give the version without the leading v, e.g. 3.0.2" && exit 1 ;;
+            3.*) ;;
+            *)
+              echo "##[error] this workflow aliases the v3 line only, and ${VERSION} is not"
+              echo "##[error] on it. Moving an older major's alias from here would break"
+              echo "##[error] everyone pinned to it. Re-tag that line by hand instead."
+              exit 1
+              ;;
+          esac
+          # `vX.Y.Z^{}` is the commit the tag points at. Without the peel a major tag
+          # made from an annotated tag would point at the tag object rather than the
+          # commit, and pushing the tag ref at `release` would create refs/tags/release
+          # instead of moving the branch.
+          major="v${VERSION%%.*}"
+          git fetch --tags --force origin
+          git tag -f "${major}" "v${VERSION}^{}"
+          git push -f origin "${major}"
+          # Plain push: a diverged release branch must fail the job, not be rewritten.
+          git push origin "v${VERSION}^{}:refs/heads/release"
+
+      - name: verify the aliases
+        if: steps.release.outputs.version != '' || inputs.version != ''
+        env:
+          VERSION: ${{ steps.release.outputs.version || inputs.version }}
+        run: |
+          set -euo pipefail
+          major="v${VERSION%%.*}"
+          commit=$(git rev-parse "v${VERSION}^{}")
+          echo "released commit: ${commit}"
+          git ls-remote origin "refs/tags/${major}" "refs/heads/release"
+          test "$(git ls-remote origin "refs/tags/${major}" | cut -f1)" = "${commit}" \
+            || (echo "##[error] ${major} does not point at ${commit}" && exit 1)
+          test "$(git ls-remote origin refs/heads/release | cut -f1)" = "${commit}" \
+            || (echo "##[error] the release branch does not point at ${commit}" && exit 1)

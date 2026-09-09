@@ -19,7 +19,7 @@ jest.mock('@actions/core', () => {
           spreadsheetId: 'spreadsheet-id',
           commands,
           outputFile,
-        }[key])
+        })[key]
     ),
     setOutput: jest.fn(),
     debug: jest.fn(),

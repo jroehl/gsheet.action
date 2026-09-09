@@ -78,7 +78,6 @@ export default async function run(): Promise<Results> {
         // Every command has already run by now, so failing the step here would lose the
         // record of writes that did happen - which is the opposite of what this input is for.
         warning(
-          // eslint-disable-next-line i18n-text/no-en
           `Could not write the results to "${outputFile}": ${
             (error as Error).message
           }`
@@ -90,18 +89,15 @@ export default async function run(): Promise<Results> {
       setOutput('results', output);
     } else if (outputFileWritten) {
       notice(
-        // eslint-disable-next-line i18n-text/no-en
         `The results exceed ${MAX_OUTPUT_BYTES} bytes - the "results" output points at "${outputFile}", which holds all of them`
       );
       setOutput('results', JSON.stringify({ outputFile, truncated: true }));
     } else {
       warning(
-        // eslint-disable-next-line i18n-text/no-en
         `The results exceed ${MAX_OUTPUT_BYTES} bytes - set the "outputFile" input to receive them as a file, GitHub may refuse an output this large`
       );
       setOutput('results', output);
     }
-    // eslint-disable-next-line i18n-text/no-en
     debug(`Processed commands\n${JSON.stringify(results, null, 2)}`);
     return { results };
   } catch (error) {
