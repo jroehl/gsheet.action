@@ -34,7 +34,7 @@
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^2.0.3",
-    "google-sheet-cli": "^2.2.0"
+    "google-sheet-cli": "^3.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
