@@ -233,9 +233,15 @@ jobs:
     steps:
       # fetch-depth 0 for the whole history semantic-release reads, and for the tags
       # the alias step resolves on a workflow_dispatch rerun.
+      #
+      # persist-credentials false because `npm ci` runs below with this job's write token
+      # otherwise sitting in .git/config, where any dependency's install script can read it
+      # and push here. semantic-release authenticates over the API with GITHUB_TOKEN and
+      # needs no git credential; the alias step supplies its own, after the install.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
@@ -286,8 +292,16 @@ jobs:
         if: steps.release.outputs.version != '' || inputs.version != ''
         env:
           VERSION: ${{ steps.release.outputs.version || inputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          # The checkout persists no credential, so the pushes below need one, and this is
+          # the right place for it: after `npm ci`. The helper is stored unexpanded - the
+          # single quotes matter - so .git/config holds the name GH_TOKEN and never the
+          # token, and git expands it only when a push actually asks for credentials. That
+          # also keeps it off the process list, which `git config <token>` would not.
+          git config --local credential.helper \
+            '!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f'
           # Typing the v is the obvious mistake, and without this the job fails on a
           # missing `vv3.0.2` tag, which reads like the release went wrong.
           #
