@@ -43,9 +43,9 @@ A one-time setup has to happen by hand before any of that works, all of it the r
 
 Revival in progress. `action.yml` declares `node24`, arguments are coerced to the type their descriptor declares, `outputFile` keeps an oversized result from failing the step, and `dist/` is committed. Nothing here is released yet: no push, tag or merge has happened on this repository.
 
-`google-sheet-cli` 2.3.0 is published, so step 1 below is done. Its 3.0.0 is merged to that repo's master and no longer blocked — the quota that held it back was raised on 2026-09-09 — but the publish has not been re-run yet.
+`google-sheet-cli` 2.3.0 and 3.0.0 are both published, so step 1 below is done and the quota that held 3.0.0 back is raised. 3.0.0 carries SLSA provenance: it went out over OIDC trusted publishing, with no npm token anywhere.
 
-Three branches stack in this order, each on the one before: `worktree-init-claude-md` (PR A, the v3.0.0 hotfix), `toolchain` (PR B), and `cli-3` (the bump to `google-sheet-cli` 3, which shrinks `dist/index.js` from 23.8 MiB to 1.8 MiB). `cli-3`'s lockfile still pins the 2.x library on purpose — it cannot be regenerated until 3.0.0 is on npm, so that branch's CI cannot pass before then.
+Three branches stack in this order, each on the one before: `worktree-init-claude-md` (PR A, the v3.0.0 hotfix), `toolchain` (PR B), and `cli-3` (the bump to `google-sheet-cli` 3, which shrinks `dist/index.js` from 23.8 MiB to 1.8 MiB). `cli-3`'s lockfile now resolves the published 3.0.0.
 
 Remaining sequence:
 
@@ -56,5 +56,5 @@ Remaining sequence:
 5. Owner runs the `release` skill for `3.0.0`, in its documented order: link the history locally, tag `v3.0.0` and move `v3` locally, then push `v3.0.0`, `v3` and the `release` alias, and only then `git push origin master`. Pushing `master` before `v3.0.0` exists is the one ordering mistake that publishes a wrong version permanently.
 6. Owner creates the GitHub release, then runs `npm ci && npx semantic-release --dry-run --no-ci` on `master`. The gate is the baseline line, not the next version: it must read `Found git tag v3.0.0 associated with version 3.0.0 on branch master`. Releasing nothing is the pass - `master` is the tagged commit, so there is nothing after the tag to release. `No git tag version found` (then `1.0.0`) or `Found git tag v2.1.1` (then a `2.x`) is the failure. Until it passes, the `release` job must not run for real (`test-docs/revive-v3.md`).
 7. Merge PR B. Not before step 6: it is a push to `master`, so `v3.0.0` has to be reachable from `master` first.
-8. Once `google-sheet-cli` 3.0.0 publishes, regenerate `cli-3`'s lockfile and merge it as 3.1.0.
+8. Merge `cli-3` as 3.1.0. Its lockfile is regenerated against the published 3.0.0 already.
 9. Delete the remote `preview/*` branches, close the dependabot PRs on both repositories, and close issues #611, #612, #616, #617 and PR #615.

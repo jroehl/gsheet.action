@@ -17828,6 +17828,50 @@ const LOG_NAMESPACE = 'gsheet:sheets';
  */
 const warn = (message) => (0, log_1.log)(LOG_NAMESPACE, message);
 /**
+ * How long to wait before each retry of a quota rejection, in ms.
+ *
+ * Google answers a spent per-minute quota with `429 RESOURCE_EXHAUSTED` and asks for exponential
+ * backoff (https://developers.google.com/workspace/sheets/api/limits). Retrying that is already
+ * happening: `googleapis-common` sets `retry: true` on every request it builds, and 429 is in
+ * gaxios' default `statusCodesToRetry`. What is not happening is waiting long enough. gaxios'
+ * default schedule is 100ms, 500ms, 1500ms, so - measured against the fake in test/fake-sheets.ts
+ * - all four attempts land inside 2.1s of a limit that is counted over a whole minute, and each
+ * of them spends another unit of the quota they are queueing for.
+ *
+ * Three waits of 3s, 12s and 48s put the last attempt 63s after the first rejection, so the
+ * minute that rejection was counted in has rolled over by the time it is made. A bucket still
+ * empty then is not transient, and the call fails carrying Google's own message.
+ */
+const QUOTA_BACKOFF_MS = [3000, 12000, 48000];
+/**
+ * Retry settings handed to every request the client makes.
+ *
+ * `retryBackoff` is the only thing set, and it replaces nothing but the length of the wait.
+ * gaxios keeps deciding *whether* to retry - the same statuses, the same methods, the same three
+ * retries - so no request that fails today starts being retried, and a request that succeeds
+ * never reaches any of this. A rejection that is not a 429 keeps gaxios' own delay.
+ *
+ * That leaves one gap on purpose: gaxios retries GET, HEAD, PUT, OPTIONS and DELETE, so
+ * `spreadsheets.get` and `values.update` are covered but the POSTs - `spreadsheets.batchUpdate`
+ * and `values.append` - are not. A 429 is a rejection rather than a half-done write, so those
+ * would be safe to replay, but the method list is also what stops a non-idempotent write from
+ * being replayed after a 5xx, and narrowing it to the quota case is a bigger change than this
+ * one is meant to be.
+ */
+const RETRY_CONFIG = {
+    retryBackoff: (error, defaultBackoffMs) => {
+        var _a, _b, _c, _d;
+        // gaxios has already counted this attempt when it calls us, so the first retry is 1.
+        const attempt = ((_b = (_a = error === null || error === void 0 ? void 0 : error.config) === null || _a === void 0 ? void 0 : _a.retryConfig) === null || _b === void 0 ? void 0 : _b.currentRetryAttempt) || 1;
+        const quota = ((_c = error === null || error === void 0 ? void 0 : error.response) === null || _c === void 0 ? void 0 : _c.status) === 429;
+        const ms = quota ? (_d = QUOTA_BACKOFF_MS[attempt - 1]) !== null && _d !== void 0 ? _d : QUOTA_BACKOFF_MS[QUOTA_BACKOFF_MS.length - 1] : defaultBackoffMs;
+        // A silent 48 second pause is indistinguishable from a hang, so say what is being waited for.
+        if (quota)
+            warn(`quota exceeded, retrying in ${Math.round(ms / 1000)}s (attempt ${attempt} of ${QUOTA_BACKOFF_MS.length})`);
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    },
+};
+/**
  * GoogleSheet helper class for CRUD operations
  *
  * @export
@@ -17859,7 +17903,7 @@ class GoogleSheet {
             throw new Error('private_key is required to authorize');
         // Create the JWT client
         const client = new sheets_1.auth.JWT({ email: client_email, key: private_key, scopes: [SHEETS_SCOPE] });
-        this.sheets = (0, sheets_1.sheets)({ version: 'v4', auth: client });
+        this.sheets = (0, sheets_1.sheets)({ version: 'v4', auth: client, retryConfig: RETRY_CONFIG });
     }
     /**
      * Get information about the spreadsheet.
