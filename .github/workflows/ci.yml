@@ -60,7 +60,10 @@ jobs:
 
   e2e:
     # Forks do not get the repository secrets, so only run this for branches of this repository.
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    # Dependabot's branch is in this repository but GitHub hands its runs the fork treatment, so
+    # the credentials would resolve empty and every update PR would carry a permanently red
+    # check. Skip it rather than duplicate the secrets into the Dependabot store.
+    if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-latest
     env:
       GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
