@@ -37,24 +37,33 @@ Sheets defaults to **60 reads per minute per user**, and a self-service consumer
 
 A `workflow_dispatch` with a `version` input skips the three test jobs and `semantic-release` and re-runs the alias movement alone. That is the recovery when a release tagged fine but the aliases did not land; re-running it on a correct release is a no-op.
 
-A one-time setup has to happen by hand before any of that works, all of it the repository owner's and each push needing confirmation for that specific push. No `v1.x`/`v2.x` tag is an ancestor of `master` - the release-branch history and the tag history diverged - so `master` needs a one-time `git merge -s ours --allow-unrelated-histories v2.1.1`, or `semantic-release` reads it as having never released and cuts `1.0.0`. The `release` branch has unrelated history too and needs one force-push before the workflow's plain push can fast-forward it. **The order matters more than any single step: `v3.0.0` and `v3` are tagged locally and pushed first, and `git push origin master` comes last.** A `master` push made while only the linked v2 tags are reachable would let `semantic-release` cut `2.2.0` over v3 code and force the `v2` alias onto the breaking action - both permanent. The `release` job refuses to run `semantic-release` unless a `v3.*` tag is reachable from `HEAD`, which catches that mistake, and the guard's pattern has to be raised at v4. The whole sequence, the `semantic-release --dry-run` that gates the first automated release, the manual tagging fallback and rollback are in `.claude/skills/release/SKILL.md`.
+The one-time setup this needed is done: the pre-v3 tag history was linked onto `master`
+with a `merge -s ours`, `v3.0.0` and `v3` were tagged and pushed before `master`, and the
+`release` branch took its one force-push onto the tag so later pushes fast-forward. None of
+it can happen again, and the detail lives in `.claude/skills/release/SKILL.md`. What still
+matters day to day: the `release` job refuses to run `semantic-release` unless a `v3.*` tag
+is reachable from `HEAD`, and the alias step refuses a version off the v3 line. Both patterns
+have to be raised at v4.
+
+Because merges here are squashed, `semantic-release` only ever reads the squash subject, never
+the branch's commits. The subject is the release decision - a branch carrying a `fix:` merged
+under a `chore:` subject releases nothing, which is what happened on #619 and was correct there.
 
 ## Status (2026-09-09)
 
-Revival in progress. `action.yml` declares `node24`, arguments are coerced to the type their descriptor declares, `outputFile` keeps an oversized result from failing the step, and `dist/` is committed. Nothing here is released yet: no push, tag or merge has happened on this repository.
+`v3.0.0` is released. `master`, `release`, the `v3` alias and the `v3.0.0` tag all point at the
+same commit, and releases are now cut by CI on a push to `master`. The action runs on `node24`,
+arguments are coerced to the type their descriptor declares, `outputFile` keeps an oversized
+result from failing the step, and `dist/` is committed.
 
-`google-sheet-cli` 2.3.0 and 3.0.0 are both published, so step 1 below is done and the quota that held 3.0.0 back is raised. 3.0.0 carries SLSA provenance: it went out over OIDC trusted publishing, with no npm token anywhere.
+`google-sheet-cli` 2.3.0 and 3.0.0 are both published; 3.0.0 carries SLSA provenance from OIDC
+trusted publishing, with no npm token anywhere.
 
-Three branches stack in this order, each on the one before: `worktree-init-claude-md` (PR A, the v3.0.0 hotfix), `toolchain` (PR B), and `cli-3` (the bump to `google-sheet-cli` 3, which shrinks `dist/index.js` from 23.8 MiB to 1.8 MiB). `cli-3`'s lockfile now resolves the published 3.0.0.
+What is left:
 
-Remaining sequence:
-
-1. ~~Release `google-sheet-cli` 2.3.0.~~ Done.
-2. ~~Migrate `.github/workflows/ci.yml` off `1password/load-secrets-action` onto the repository secrets.~~ Done, on PR A.
-3. Squash-merge PR A into `master`. Squash, not merge: the branches carry assistant attribution trailers this repository's history is not meant to contain, and GitHub's proposed squash message concatenates the commit bodies, so clear it and write the message by hand.
-4. Rebase PR B onto the new `master` and re-verify the bundle. Do not merge it yet.
-5. Owner runs the `release` skill for `3.0.0`, in its documented order: link the history locally, tag `v3.0.0` and move `v3` locally, then push `v3.0.0`, `v3` and the `release` alias, and only then `git push origin master`. Pushing `master` before `v3.0.0` exists is the one ordering mistake that publishes a wrong version permanently.
-6. Owner creates the GitHub release, then runs `npm ci && npx semantic-release --dry-run --no-ci` on `master`. The gate is the baseline line, not the next version: it must read `Found git tag v3.0.0 associated with version 3.0.0 on branch master`. Releasing nothing is the pass - `master` is the tagged commit, so there is nothing after the tag to release. `No git tag version found` (then `1.0.0`) or `Found git tag v2.1.1` (then a `2.x`) is the failure. Until it passes, the `release` job must not run for real (`test-docs/revive-v3.md`).
-7. Merge PR B. Not before step 6: it is a push to `master`, so `v3.0.0` has to be reachable from `master` first.
-8. Merge `cli-3` as 3.1.0. Its lockfile is regenerated against the published 3.0.0 already.
-9. Delete the remote `preview/*` branches, close the dependabot PRs on both repositories, and close issues #611, #612, #616, #617 and PR #615.
+1. This branch: `google-sheet-cli` 3, which takes `dist/index.js` from 24.3 MiB to 1.8 MiB and
+   closes #611. It has to release as a minor, so the squash subject needs a `feat:`.
+2. Restore `master`'s branch protection. It was relaxed to land #618 and never put back:
+   required contexts should be `test`, `dist-check` and `e2e`, and `allow_force_pushes` false.
+   Leave the approving-review requirement off while one person maintains this, or every merge
+   needs an admin override.
