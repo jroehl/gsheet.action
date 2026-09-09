@@ -46,10 +46,16 @@ jobs:
       - name: package
         run: npm run package
 
+      # ncc can emit lazily loaded <id>.index.js chunks beside index.js. A new one is
+      # untracked, which `git diff` does not report, so ask for both kinds of change.
       - name: verify dist is up to date
         run: |
           git diff --ignore-space-at-eol --exit-code dist/ \
             || (echo "##[error] dist/ does not match the sources. Run 'npm run package' and commit dist/" \
+                && exit 1)
+          test -z "$(git ls-files --others --exclude-standard -- dist/)" \
+            || (echo "##[error] dist/ has files the build produced but nobody committed:" \
+                && git ls-files --others --exclude-standard -- dist/ \
                 && exit 1)
 
   e2e:

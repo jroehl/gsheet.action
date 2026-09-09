@@ -92,6 +92,24 @@ describe('outputFile', () => {
     expect(core.warning).not.toHaveBeenCalled();
   });
 
+  it('points at the file for an ascii result GitHub would refuse', async () => {
+    // 600 kB of ASCII: under the limit by UTF-8 bytes, over it by the UTF-16
+    // approximation GitHub documents, so the file pointer is the correct answer.
+    getDataResult = { rawData: [['x'.repeat(600 * 1000)]] };
+
+    const res: Results = await run();
+
+    expect(core.setFailed).not.toHaveBeenCalled();
+    const expected = JSON.stringify({ results: res.results });
+    expect(Buffer.byteLength(expected)).toBeLessThan(1000000);
+    expect(expected.length * 2).toBeGreaterThan(1000000);
+    expect(fs.readFileSync(outputFile, 'utf8')).toBe(expected);
+    expect(core.setOutput).toHaveBeenCalledWith(
+      'results',
+      JSON.stringify({ outputFile, truncated: true })
+    );
+  });
+
   it('keeps the results when the output file cannot be written', async () => {
     // A directory where the file should be: mkdirSync succeeds, writeFileSync raises EISDIR.
     outputFile = path.join(tmpDir, 'nested', 'results.json');
