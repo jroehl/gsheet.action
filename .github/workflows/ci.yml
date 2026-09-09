@@ -53,27 +53,16 @@ jobs:
                 && exit 1)
 
   e2e:
-    # Forks do not get the 1Password secrets, so only run this for branches of this repository.
+    # Forks do not get the repository secrets, so only run this for branches of this repository.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    env:
+      GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
+      GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+      TEST_SPREADSHEET_ID: ${{ secrets.TEST_SPREADSHEET_ID }}
     steps:
-      - name: Configure 1Password Service Account
-        uses: 1password/load-secrets-action/configure@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
-        with:
-          service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-
-      - name: Load Secrets
-        uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
-        with:
-          unset-previous: false
-          export-env: true
-        env:
-          GSHEET_CLIENT_EMAIL: 'op://service-account/github.actions/GSHEET_CLIENT_EMAIL'
-          GSHEET_PRIVATE_KEY: 'op://service-account/github.actions/GSHEET_PRIVATE_KEY'
-          TEST_SPREADSHEET_ID: 'op://service-account/github.actions/TEST_SPREADSHEET_ID'
-
-      # A pull request from a fork never reaches this job, but a misconfigured vault would
-      # silently turn the push run into a no-op, so fail loudly on master instead.
+      # A pull request from a fork never reaches this job, but a secret deleted or renamed on
+      # the repository would silently turn the push run into a no-op, so fail loudly on master.
       - name: assert secrets are present
         if: github.event_name == 'push'
         run: |
