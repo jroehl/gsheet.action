@@ -78,7 +78,6 @@ export default async function run(): Promise<Results> {
         // Every command has already run by now, so failing the step here would lose the
         // record of writes that did happen - which is the opposite of what this input is for.
         warning(
-          // eslint-disable-next-line i18n-text/no-en
           `Could not write the results to "${outputFile}": ${
             (error as Error).message
           }`
