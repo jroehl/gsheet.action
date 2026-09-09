@@ -2,3 +2,11 @@
 . "$(dirname "$0")/_/husky.sh"
 
 npm run document
+npm run package
+
+# ncc emits lazily loaded <id>.index.js chunks next to index.js. A new one is untracked, which
+# `git diff` does not see, so ask for both kinds of change.
+if ! git diff --quiet -- README.md dist || [ -n "$(git ls-files --others --exclude-standard -- dist)" ]; then
+  echo "README or dist changed after build; run git add README.md dist and commit again"
+  exit 1
+fi

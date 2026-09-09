@@ -44,7 +44,7 @@ const descriptions: { [arg: string]: Description } = {
     def: 'RAW',
   },
   [Arg.data]: {
-    type: 'string',
+    type: 'json',
     description:
       'The data to be used as a JSON string - nested array [["1", "2", "3"]]',
   },

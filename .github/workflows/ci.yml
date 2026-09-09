@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: install
+        run: npm ci
+
+      - name: build
+        run: npm run build
+
+      # No credentials: the live suite in src/main.test.ts skips itself, the e2e job covers it.
+      - name: test
+        run: npm test
+
+  dist-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: install
+        run: npm ci
+
+      - name: package
+        run: npm run package
+
+      # ncc can emit lazily loaded <id>.index.js chunks beside index.js. A new one is
+      # untracked, which `git diff` does not report, so ask for both kinds of change.
+      - name: verify dist is up to date
+        run: |
+          git diff --ignore-space-at-eol --exit-code dist/ \
+            || (echo "##[error] dist/ does not match the sources. Run 'npm run package' and commit dist/" \
+                && exit 1)
+          test -z "$(git ls-files --others --exclude-standard -- dist/)" \
+            || (echo "##[error] dist/ has files the build produced but nobody committed:" \
+                && git ls-files --others --exclude-standard -- dist/ \
+                && exit 1)
+
+  e2e:
+    # Forks do not get the repository secrets, so only run this for branches of this repository.
+    # Dependabot's branch is in this repository but GitHub hands its runs the fork treatment, so
+    # the credentials would resolve empty and every update PR would carry a permanently red
+    # check. Skip it rather than duplicate the secrets into the Dependabot store.
+    if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    env:
+      GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
+      GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+      TEST_SPREADSHEET_ID: ${{ secrets.TEST_SPREADSHEET_ID }}
+    steps:
+      # A pull request from a fork never reaches this job, but a secret deleted or renamed on
+      # the repository would silently turn the push run into a no-op, so fail loudly on master.
+      - name: assert secrets are present
+        if: github.event_name == 'push'
+        run: |
+          test -n "${GSHEET_CLIENT_EMAIL}" || (echo "##[error] GSHEET_CLIENT_EMAIL is empty" && exit 1)
+          test -n "${GSHEET_PRIVATE_KEY}" || (echo "##[error] GSHEET_PRIVATE_KEY is empty" && exit 1)
+          test -n "${TEST_SPREADSHEET_ID}" || (echo "##[error] TEST_SPREADSHEET_ID is empty" && exit 1)
+
+      - name: name the worksheets after this run
+        run: |
+          title="gsheet.action_e2e_$(date +%s)_${{ github.sha }}"
+          echo "WORKSHEET_TITLE=${title}" >> "${GITHUB_ENV}"
+          echo "WORKSHEET_TITLE_NEW=${title}_new" >> "${GITHUB_ENV}"
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - id: 'run_worksheet_tests'
+        uses: './'
+        with:
+          spreadsheetId: ${{ env.TEST_SPREADSHEET_ID }}
+          commands: | # list of commands, specified as a valid JSON string
+            [
+              { "command": "addWorksheet", "args": { "worksheetTitle": "${{ env.WORKSHEET_TITLE }}" }},
+              { "command": "updateData", "args": { "data": [["A1", "A2", "A3"]] }},
+              { "command": "appendData", "args": { "data": [["B1", "B2", "B3"]], "minCol": 1 }},
+              { "command": "appendData", "args": { "data": [["C2", "C3", "C4"]], "minCol": 2 }},
+              { "command": "getData", "args": { "minCol": 1 } },
+              { "command": "getData", "args": { "range": "${{ env.WORKSHEET_TITLE }}!A2:B3" } },
+              { "command": "updateData", "args": { "data": [[1]], "minRow": 10, "minCol": 1 }},
+              { "command": "getData", "args": { "minRow": 10, "minCol": 1 } },
+              { "command": "renameWorksheet", "args": { "worksheetTitle": "${{ env.WORKSHEET_TITLE }}", "newWorksheetTitle": "${{ env.WORKSHEET_TITLE_NEW }}" }},
+              { "command": "removeWorksheet", "args": { "worksheetTitle": "${{ env.WORKSHEET_TITLE_NEW }}" }}
+            ]
+        env:
+          GSHEET_CLIENT_EMAIL: ${{ env.GSHEET_CLIENT_EMAIL }}
+          GSHEET_PRIVATE_KEY: ${{ env.GSHEET_PRIVATE_KEY }}
+
+      - name: run tests
+        env:
+          #  the output of the action can be found in ${{ steps.run_worksheet_tests.outputs.results }}
+          RESULTS: ${{ steps.run_worksheet_tests.outputs.results }}
+        run: |
+          function assert() {
+            local filter=${1}
+            local comp=${2}
+            local expected=${3}
+            local result=$(echo "${RESULTS}" | jq --raw-output "${filter}")
+            local msg="assert ${filter} ${comp} ${expected}"
+            local success=${4:-"✅ ${msg}"}
+            local failure=${5:-"❌ ${msg} - (\"${result}\")"}
+            # Quoting matters: every assertion below that expects "" collapses to a
+            # one-argument `test` without it, and a one-argument `test` on a non-empty
+            # word is always true, so the assertion passes whatever the sheet says.
+            test "${result}" "${comp}" "${expected}" && (printf "    %s\n" "${success}") || (printf "    %s\n" "${failure}" && exit 1)
+          }
+
+          function echo_test_run() {
+            local cmd=$(echo "${RESULTS}" | jq ".results[${1}].command.func")
+            echo "${cmd} (${1})"
+          }
+
+          echo "🧪 Running tests"
+
+          assert ".results | length" "-eq" "10"
+
+          echo_test_run 0
+          assert ".results[0].result.properties.title" "=" "${WORKSHEET_TITLE}"
+
+          echo_test_run 1
+          assert ".results[1].command.kwargs[0][0][0]" "=" "A1"
+          assert ".results[1].command.kwargs[0][0][1]" "=" "A2"
+          assert ".results[1].command.kwargs[0][0][2]" "=" "A3"
+
+          echo_test_run 2
+          assert ".results[2].command.kwargs[0][0][0]" "=" "B1"
+          assert ".results[2].command.kwargs[0][0][1]" "=" "B2"
+          assert ".results[2].command.kwargs[0][0][2]" "=" "B3"
+
+          echo_test_run 3
+          assert ".results[3].command.kwargs[1].minCol" "-eq" "2"
+          assert ".results[3].command.kwargs[1].minRow" "-eq" "3"
+
+          echo_test_run 4
+          assert ".results[4].result.rawData[0][0]" "=" "A1"
+          assert ".results[4].result.rawData[0][1]" "=" "A2"
+          assert ".results[4].result.rawData[0][2]" "=" "A3"
+          assert ".results[4].result.rawData[0][3]" "=" ""
+          assert ".results[4].result.rawData[1][0]" "=" "B1"
+          assert ".results[4].result.rawData[1][1]" "=" "B2"
+          assert ".results[4].result.rawData[1][2]" "=" "B3"
+          assert ".results[4].result.rawData[1][3]" "=" ""
+          assert ".results[4].result.rawData[2][0]" "=" ""
+          assert ".results[4].result.rawData[2][1]" "=" "C2"
+          assert ".results[4].result.rawData[2][2]" "=" "C3"
+          assert ".results[4].result.rawData[2][3]" "=" "C4"
+          assert ".results[4].result.header[0]" "=" "(A)"
+          assert ".results[4].result.header[1]" "=" "(B)"
+          assert ".results[4].result.header[2]" "=" "(C)"
+          assert ".results[4].result.header[3]" "=" "(D)"
+
+          echo_test_run 5
+          assert ".results[5].result.rawData[0][0]" "=" "B1"
+          assert ".results[5].result.rawData[0][1]" "=" "B2"
+          assert ".results[5].result.rawData[1][0]" "=" ""
+          assert ".results[5].result.rawData[1][1]" "=" "C2"
+
+          # #616: a single-value nested array. v2's parser stringified [[1]] to "1",
+          # re-parsed it to the number 1 and rejected it as "not nested".
+          echo_test_run 6
+          assert ".results[6].command.kwargs[0][0][0]" "-eq" "1"
+
+          echo_test_run 7
+          assert ".results[7].result.rawData[0][0]" "=" "1"
+
+          echo "🎉 Tests successful"

@@ -15,11 +15,24 @@ jest.mock('@actions/core', () => {
     ),
     setOutput: jest.fn(),
     debug: jest.fn(),
+    notice: jest.fn(),
+    warning: jest.fn(),
     setFailed: jest.fn(),
   };
 });
 
-describe('main.ts', () => {
+// Step 17 re-points this specifier to 'google-sheet-cli/sheet'.
+// The tests below need the real client; the stub only keeps the offline run
+// from loading googleapis for a block it is going to skip anyway.
+jest.mock('google-sheet-cli/lib/lib/google-sheet', () =>
+  process.env.TEST_SPREADSHEET_ID
+    ? jest.requireActual('google-sheet-cli/lib/lib/google-sheet')
+    : { __esModule: true, default: class {} }
+);
+
+const describeLive = process.env.TEST_SPREADSHEET_ID ? describe : describe.skip;
+
+describeLive('main.ts', () => {
   it('should complete a run', async () => {
     commands = JSON.stringify([
       {
@@ -80,7 +93,7 @@ describe('main.ts', () => {
     expect(core.debug).toHaveBeenCalled();
     expect(core.setOutput).toHaveBeenCalledWith(
       'results',
-      `{\"results\":[{\"command\":{\"func\":\"removeWorksheet\",\"kwargs\":[\"${worksheetTitle}\",null]}}]}`
+      `{"results":[{"command":{"func":"removeWorksheet","kwargs":["${worksheetTitle}",null]}}]}`
     );
   });
 
