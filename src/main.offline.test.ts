@@ -92,6 +92,34 @@ describe('outputFile', () => {
     expect(core.warning).not.toHaveBeenCalled();
   });
 
+  it('keeps the results when the output file cannot be written', async () => {
+    // A directory where the file should be: mkdirSync succeeds, writeFileSync raises EISDIR.
+    outputFile = path.join(tmpDir, 'nested', 'results.json');
+    fs.mkdirSync(outputFile, { recursive: true });
+    getDataResult = { rawData: [['1', '2', '3']] };
+
+    const res: Results = await run();
+
+    expect(core.setFailed).not.toHaveBeenCalled();
+    const expected = JSON.stringify({ results: res.results });
+    expect(core.setOutput).toHaveBeenCalledWith('results', expected);
+    expect(core.warning).toHaveBeenCalled();
+  });
+
+  it('keeps an oversized output when the file it would point at was not written', async () => {
+    outputFile = path.join(tmpDir, 'nested', 'results.json');
+    fs.mkdirSync(outputFile, { recursive: true });
+    getDataResult = { rawData: [['x'.repeat(2 * 1024 * 1024)]] };
+
+    const res: Results = await run();
+
+    expect(core.setFailed).not.toHaveBeenCalled();
+    const expected = JSON.stringify({ results: res.results });
+    expect(Buffer.byteLength(expected)).toBeGreaterThan(1000000);
+    expect(core.setOutput).toHaveBeenCalledWith('results', expected);
+    expect(core.notice).not.toHaveBeenCalled();
+  });
+
   it('keeps an oversized output when there is no file to point at', async () => {
     outputFile = '';
     getDataResult = { rawData: [['x'.repeat(2 * 1024 * 1024)]] };

@@ -64,14 +64,27 @@ export default async function run(): Promise<Results> {
     const outputFile: string = getInput('outputFile', {
       required: false,
     });
+    let outputFileWritten = false;
     if (outputFile) {
-      mkdirSync(dirname(outputFile), { recursive: true });
-      writeFileSync(outputFile, output);
+      try {
+        mkdirSync(dirname(outputFile), { recursive: true });
+        writeFileSync(outputFile, output);
+        outputFileWritten = true;
+      } catch (error) {
+        // Every command has already run by now, so failing the step here would lose the
+        // record of writes that did happen - which is the opposite of what this input is for.
+        warning(
+          // eslint-disable-next-line i18n-text/no-en
+          `Could not write the results to "${outputFile}": ${
+            (error as Error).message
+          }`
+        );
+      }
     }
 
     if (Buffer.byteLength(output) < MAX_OUTPUT_BYTES) {
       setOutput('results', output);
-    } else if (outputFile) {
+    } else if (outputFileWritten) {
       notice(
         // eslint-disable-next-line i18n-text/no-en
         `The results exceed ${MAX_OUTPUT_BYTES} bytes - the "results" output points at "${outputFile}", which holds all of them`

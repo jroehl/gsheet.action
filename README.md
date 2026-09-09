@@ -140,6 +140,7 @@ Command syntax, inputs and outputs are otherwise compatible. These are the diffe
 - **`data: [[1]]` works.** Single-value nested arrays, and nested arrays holding numbers or booleans, used to be rejected as "not nested" (#616). They now write.
 - **New optional `outputFile` input.** Writes the full results JSON to a path of your choosing. Existing workflows are unaffected; see the example above.
 - **A different error message for malformed `data`.** The text changed; the input shapes that fail did not. `data: []` is still accepted and still issues an empty write.
+- **Bad numbers and bad JSON now fail fast.** A numeric input that is not a number (`minRow: "abc"`) and a `data` string that is not valid JSON are rejected before any command runs, with a message naming the argument. v2 forwarded both and failed later, deeper in the library, or wrote something you did not mean. An empty or whitespace-only numeric input still means "not set", as it did on v2.
 - **A `punycode` deprecation warning on stderr.** `[DEP0040] DeprecationWarning: The punycode module is deprecated` comes from a transitive dependency on Node 21 and above. It is noise, not a failure, and disappears when that dependency is updated.
 
 ## Supported commands
