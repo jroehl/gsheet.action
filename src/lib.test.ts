@@ -162,6 +162,12 @@ describe('lib', () => {
         );
       });
 
+      it('names an unquoted numeric worksheet title as a string', () => {
+        expect(validateOne('addWorksheet', { worksheetTitle: 2026 })[0]).toBe(
+          '2026'
+        );
+      });
+
       it('keeps a range with a quoted worksheet title a string', () => {
         expect(validateOne('getData', { range: "'2026'!A2:B3" })[0]).toEqual({
           range: "'2026'!A2:B3",

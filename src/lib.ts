@@ -72,8 +72,16 @@ const coerce = (arg: string, value: unknown): unknown => {
         );
       }
     }
+    case 'string': {
+      // A workflow that interpolates an expression without quoting it - "worksheetTitle":
+      // ${{ github.run_number }} - lands here as a JSON number. v2 forwarded it and the API
+      // refused it, so naming it in the type the descriptor declares only widens what works.
+      if (typeof value === 'number' || typeof value === 'boolean')
+        return String(value);
+      return value;
+    }
     default:
-      // "string" and anything without a declared type is passed through
+      // anything without a declared type is passed through
       return value;
   }
 };
