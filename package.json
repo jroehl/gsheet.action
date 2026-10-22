@@ -42,17 +42,17 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^24.13.3",
     "@vercel/ncc": "^0.45.0",
-    "eslint": "^10.10.0",
+    "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-jest": "^29.16.6",
-    "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-jest": "^29.17.0",
+    "eslint-plugin-prettier": "^5.5.7",
     "husky": "^9.1.7",
     "jest": "^30.5.1",
     "js-yaml": "^4.1.0",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.10",
     "semantic-release": "^25.0.9",
     "ts-jest": "^29.4.12",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.69.0"
+    "typescript-eslint": "^8.71.2"
   }
 }
